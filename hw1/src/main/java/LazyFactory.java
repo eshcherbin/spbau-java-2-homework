@@ -1,29 +1,42 @@
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.function.Supplier;
 
 public class LazyFactory {
-    public static <T> Lazy<T> createLazyNonConcurrent(Supplier<T> supplier) {
+    @NotNull
+    public static <T> Lazy<T> createLazyNonConcurrent(@NotNull Supplier<T> supplier) {
         return null;
     }
 
-    public static <T> Lazy<T> createLazyConcurrent(Supplier<T> supplier) {
+    @NotNull
+    public static <T> Lazy<T> createLazyConcurrent(@NotNull Supplier<T> supplier) {
         return new LazyImplConcurrent<>(supplier);
     }
 
-    public static <T> Lazy<T> createLazyConcurrentLockFree(Supplier<T> supplier) {
+    @NotNull
+    public static <T> Lazy<T> createLazyConcurrentLockFree(@NotNull Supplier<T> supplier) {
         return null;
     }
 
-    private static class LazyImplConcurrent<T> implements Lazy<T> {
-        private static Object noResultYet = new Object();
+    private static abstract class LazyImpl<T> implements Lazy<T> {
+        protected static Object noResultYet = new Object();
 
-        private Supplier<T> supplier;
-        private volatile T result = (T) noResultYet;
+        protected Supplier<T> supplier;
+        protected volatile T result = (T) noResultYet;
 
-        private LazyImplConcurrent(Supplier<T> supplier) {
+        private LazyImpl(@NotNull Supplier<T> supplier) {
             this.supplier = supplier;
+        }
+    }
+
+    private static class LazyImplConcurrent<T> extends LazyImpl<T> {
+        private LazyImplConcurrent(@NotNull Supplier<T> supplier) {
+            super(supplier);
         }
 
         @Override
+        @Nullable
         public T get() {
             if (result != noResultYet) {
                 return result;
