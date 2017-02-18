@@ -13,7 +13,6 @@ public class LazyFactoryTest {
 
     private static int instantSupplierCallsNumber = 0;
     private static int sleepingSupplierCallsNumber = 0;
-    private static AtomicInteger atomicCounter = new AtomicInteger(0);
 
     private static final Supplier<Object> nullSupplier = () -> null;
     private static final Supplier<String> instantSupplier = () -> {
@@ -28,7 +27,6 @@ public class LazyFactoryTest {
         ++sleepingSupplierCallsNumber;
         return TEST_STRING;
     };
-    private static final Supplier<Integer> atomicCounterSupplier = () -> atomicCounter.getAndIncrement();
 
     @Before
     public void setUp() throws Exception {
@@ -115,28 +113,6 @@ public class LazyFactoryTest {
         }
         System.out.println(sleepingSupplierCallsNumber);
         assertEquals(TEST_STRING, results[0]);
-        for (int i = 1; i < results.length; ++i) {
-            assertSame(results[0], results[i]);
-        }
-    }
-
-    @Test
-    public void testLazyImplConcurrentLockFreeOrderOfGet() throws Exception {
-        Lazy<Integer> atomicCounterLazy = LazyFactory.createLazyConcurrentLockFree(atomicCounterSupplier);
-        int initialCounterValue = atomicCounter.get();
-        Integer[] results = new Integer[THREADS_NUMBER];
-        Thread[] threads = new Thread[THREADS_NUMBER];
-        for (int i = 0; i < threads.length; ++i) {
-            int threadIndex = i; // cannot just capture `i` -- need an effectively final variable
-            threads[i] = new Thread(() -> results[threadIndex] = atomicCounterLazy.get());
-        }
-        for (Thread thread : threads) {
-            thread.start();
-        }
-        for (Thread thread : threads) {
-            thread.join();
-        }
-        assertEquals(initialCounterValue, results[0].intValue());
         for (int i = 1; i < results.length; ++i) {
             assertSame(results[0], results[i]);
         }
