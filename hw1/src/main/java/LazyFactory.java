@@ -59,7 +59,7 @@ public class LazyFactory {
                 return result;
             }
             synchronized (this) {
-                if (result != noResultYet) {
+                if (result == noResultYet) {
                     result = supplier.get();
                     supplier = null;
                 }
@@ -69,8 +69,8 @@ public class LazyFactory {
     }
 
     private static class LazyImplConcurrentLockFree<T> extends LazyImpl<T> {
-        private static final AtomicReferenceFieldUpdater<LazyImplConcurrentLockFree, Object> atomicResultUpdater =
-                AtomicReferenceFieldUpdater.newUpdater(LazyImplConcurrentLockFree.class, Object.class, "result");
+        private static final AtomicReferenceFieldUpdater<LazyImpl, Object> atomicResultUpdater =
+                AtomicReferenceFieldUpdater.newUpdater(LazyImpl.class, Object.class, "result");
 
         private LazyImplConcurrentLockFree(@NotNull Supplier<T> supplier) {
             super(supplier);
@@ -79,7 +79,9 @@ public class LazyFactory {
         @Override
         @Nullable
         public T get() {
-            atomicResultUpdater.compareAndSet(this, noResultYet, supplier.get());
+            if (result == noResultYet) {
+                atomicResultUpdater.compareAndSet(this, noResultYet, supplier.get());
+            }
             return result;
         }
     }
