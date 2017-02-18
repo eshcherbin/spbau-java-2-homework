@@ -6,7 +6,7 @@ import java.util.function.Supplier;
 public class LazyFactory {
     @NotNull
     public static <T> Lazy<T> createLazyNonConcurrent(@NotNull Supplier<T> supplier) {
-        return null;
+        return new LazyImplNonConcurrent<>(supplier);
     }
 
     @NotNull
@@ -27,6 +27,22 @@ public class LazyFactory {
 
         private LazyImpl(@NotNull Supplier<T> supplier) {
             this.supplier = supplier;
+        }
+    }
+
+    private static class LazyImplNonConcurrent<T> extends LazyImpl<T> {
+        private LazyImplNonConcurrent(@NotNull Supplier<T> supplier) {
+            super(supplier);
+        }
+
+        @Override
+        @Nullable
+        public T get() {
+            if (result == noResultYet) {
+                result = supplier.get();
+                supplier = null;
+            }
+            return result;
         }
     }
 
