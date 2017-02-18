@@ -1,6 +1,7 @@
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Supplier;
 
 public class LazyFactory {
@@ -16,7 +17,7 @@ public class LazyFactory {
 
     @NotNull
     public static <T> Lazy<T> createLazyConcurrentLockFree(@NotNull Supplier<T> supplier) {
-        return null;
+        return new LazyImplConcurrentLockFree<>(supplier);
     }
 
     private static abstract class LazyImpl<T> implements Lazy<T> {
@@ -63,6 +64,22 @@ public class LazyFactory {
                     supplier = null;
                 }
             }
+            return result;
+        }
+    }
+
+    private static class LazyImplConcurrentLockFree<T> extends LazyImpl<T> {
+        private static final AtomicReferenceFieldUpdater<LazyImplConcurrentLockFree, Object> atomicResultUpdater =
+                AtomicReferenceFieldUpdater.newUpdater(LazyImplConcurrentLockFree.class, Object.class, "result");
+
+        private LazyImplConcurrentLockFree(@NotNull Supplier<T> supplier) {
+            super(supplier);
+        }
+
+        @Override
+        @Nullable
+        public T get() {
+            atomicResultUpdater.compareAndSet(this, noResultYet, supplier.get());
             return result;
         }
     }
