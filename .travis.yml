@@ -1,0 +1,8 @@
+language: java
+jdk:
+  - oraclejdk8
+os:
+  - linux
+env:
+  - PROJECT_DIR=hw1
+script: cd $PROJECT_DIR && ./gradlew check
