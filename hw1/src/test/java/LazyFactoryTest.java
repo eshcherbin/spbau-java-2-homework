@@ -111,7 +111,7 @@ public class LazyFactoryTest {
         for (Thread thread : threads) {
             thread.join();
         }
-        System.out.println(sleepingSupplierCallsNumber);
+        assertTrue(sleepingSupplierCallsNumber >= 1);
         assertEquals(TEST_STRING, results[0]);
         for (int i = 1; i < results.length; ++i) {
             assertSame(results[0], results[i]);
