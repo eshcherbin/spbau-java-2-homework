@@ -1,3 +1,7 @@
+branches:
+  only:
+    - /.*/
+
 language: java
 jdk:
   - oraclejdk8
