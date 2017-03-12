@@ -9,28 +9,28 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class NucleusManager {
-    public static void initRepository(@NotNull Path path) throws IOException {
-        path = path.toAbsolutePath();
-        if (!Files.isDirectory(path)) {
-            //TODO: throw an exception
-        }
-        NucleusRepository repository = NucleusRepository.findRepository(path);
-        if (repository == null) {
-            //TODO: throw an exception
-        }
-        Files.createDirectory(repository.getRepositoryDirectory());
+    public static @NotNull NucleusRepository initRepository(@NotNull Path path)
+            throws IOException, DirectoryExpectedException, RepositoryAlreadyInitializedException {
+        NucleusRepository repository = NucleusRepository.createRepository(path);
         Files.createDirectory(repository.getObjectsDirectory());
         Files.createDirectory(repository.getReferencesDirectory());
         Files.createFile(repository.getIndexFile());
+        Files.createFile(repository.getHeadFile());
+        return repository;
     }
 
-    public static void updateIndex(@NotNull Path path) {
+    public static void updateIndex(@NotNull Path path) throws RepositoryNotInitializedException {
         path = path.toAbsolutePath();
+        NucleusRepository repository;
+        try {
+            repository = NucleusRepository.findRepository(path);
+        } catch (DirectoryExpectedException e) {
+            throw new RepositoryNotInitializedException();
+        }
         if (Files.isDirectory(path)) {
             //TODO: iterate through all files and add them recursively
             return;
         }
-        NucleusRepository repository= NucleusRepository.findRepository(path);
         if (repository == null) {
             //TODO: throw an exception
         }
