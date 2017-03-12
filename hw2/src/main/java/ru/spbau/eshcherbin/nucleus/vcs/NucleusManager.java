@@ -1,6 +1,7 @@
 package ru.spbau.eshcherbin.nucleus.vcs;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
@@ -34,6 +35,26 @@ public class NucleusManager {
             //TODO: throw an exception
         }
         //TODO: add file to index if needed
+        throw new NotImplementedException();
+    }
+
+    public static void commitChanges(@NotNull Path path) {
+        //TODO: implement commit
+        throw new NotImplementedException();
+    }
+
+    public static void checkoutRevision(@NotNull Path path, @NotNull String name) {
+        //TODO: implement checkout
+        throw new NotImplementedException();
+    }
+
+    public static @Nullable LogMessage getLog(@NotNull Path path) {
+        //TODO: implement log
+        throw new NotImplementedException();
+    }
+
+    public static void mergeCommit(@NotNull Path path, @NotNull String name) {
+        //TODO: implement merge
         throw new NotImplementedException();
     }
 }
