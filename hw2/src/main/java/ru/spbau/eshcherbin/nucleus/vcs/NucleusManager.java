@@ -9,6 +9,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class NucleusManager {
+    private static void updateIndex(@NotNull Path path, @NotNull NucleusRepository repository) {
+        if (Files.isDirectory(path)) {
+            //TODO: iterate through all files and add them recursively
+            return;
+        }
+        if (repository == null) {
+            //TODO: throw an exception
+        }
+        //TODO: add file to index if needed
+        throw new NotImplementedException();
+    }
+
     public static @NotNull NucleusRepository initRepository(@NotNull Path path)
             throws IOException, DirectoryExpectedException, RepositoryAlreadyInitializedException {
         NucleusRepository repository = NucleusRepository.createRepository(path);
@@ -22,20 +34,15 @@ public class NucleusManager {
     public static void updateIndex(@NotNull Path path) throws RepositoryNotInitializedException {
         path = path.toAbsolutePath();
         NucleusRepository repository;
-        try {
-            repository = NucleusRepository.findRepository(path);
-        } catch (DirectoryExpectedException e) {
+        if (path.getParent() == null) {
             throw new RepositoryNotInitializedException();
         }
-        if (Files.isDirectory(path)) {
-            //TODO: iterate through all files and add them recursively
-            return;
+        try {
+            repository = NucleusRepository.findRepository(path.getParent());
+        } catch (DirectoryExpectedException e) {
+            throw new RuntimeException("path.getParent() (\"" + path.getParent().toString() +
+                    "\" should be a directory but is not");
         }
-        if (repository == null) {
-            //TODO: throw an exception
-        }
-        //TODO: add file to index if needed
-        throw new NotImplementedException();
     }
 
     public static void commitChanges(@NotNull Path path) {
