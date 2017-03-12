@@ -5,17 +5,18 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 
 public class NucleusRepository {
     private @NotNull Path repositoryDirectory;
 
     private NucleusRepository(@NotNull Path repositoryDirectory) {
-        this.repositoryDirectory = repositoryDirectory.toAbsolutePath();
+        this.repositoryDirectory = repositoryDirectory;
     }
 
-    public static @Nullable NucleusRepository findRepository(@NotNull Path path) throws DirectoryExpectedException {
-        path = path.toAbsolutePath();
+    public static @Nullable NucleusRepository findRepository(@NotNull Path path) throws DirectoryExpectedException, IOException {
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         if (!Files.isDirectory(path)) {
             throw new DirectoryExpectedException();
         }
@@ -31,7 +32,7 @@ public class NucleusRepository {
 
     public static @NotNull NucleusRepository createRepository(@NotNull Path path)
             throws RepositoryAlreadyInitializedException, DirectoryExpectedException, IOException {
-        path = path.toAbsolutePath();
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         if (findRepository(path) != null) {
             throw new RepositoryAlreadyInitializedException();
         }

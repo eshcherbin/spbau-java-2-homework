@@ -6,6 +6,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 
 public class NucleusManager {
@@ -31,8 +32,8 @@ public class NucleusManager {
         return repository;
     }
 
-    public static void updateIndex(@NotNull Path path) throws RepositoryNotInitializedException {
-        path = path.toAbsolutePath();
+    public static void updateIndex(@NotNull Path path) throws RepositoryNotInitializedException, IOException {
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository;
         if (path.getParent() == null) {
             throw new RepositoryNotInitializedException();
