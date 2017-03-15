@@ -1,26 +1,20 @@
 package ru.spbau.eshcherbin.nucleus.vcs;
 
+import com.google.common.base.Splitter;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
+import java.nio.file.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class NucleusManager {
-    private static void updateIndex(@NotNull Path path, @NotNull NucleusRepository repository) {
-        if (Files.isDirectory(path)) {
-            //TODO: iterate through all files and add them recursively
-            return;
-        }
-        if (repository == null) {
-            //TODO: throw an exception
-        }
-        //TODO: add file to index if needed
-        throw new NotImplementedException();
-    }
+    private static final int OBJECT_DIRECTORY_NAME_LENGTH = 2;
 
     public static @NotNull NucleusRepository initRepository(@NotNull Path path)
             throws IOException, DirectoryExpectedException, RepositoryAlreadyInitializedException {
@@ -32,7 +26,46 @@ public class NucleusManager {
         return repository;
     }
 
-    public static void updateIndex(@NotNull Path path) throws RepositoryNotInitializedException, IOException {
+    private static String addFile(@NotNull NucleusRepository repository, @NotNull Path filePath)
+            throws IOException {
+        HashFunction sha1HashFunction = Hashing.sha1();
+        String sha1 = sha1HashFunction.newHasher().putBytes(Files.readAllBytes(filePath)).hash().toString();
+        Path objectDirectoryPath = repository.getObjectsDirectory()
+                .resolve(sha1.substring(0, OBJECT_DIRECTORY_NAME_LENGTH));
+        if (!Files.exists(objectDirectoryPath)) {
+            Files.createDirectory(objectDirectoryPath);
+        }
+        Files.copy(filePath, objectDirectoryPath.resolve(sha1.substring(OBJECT_DIRECTORY_NAME_LENGTH)));
+        return sha1;
+    }
+
+    private static void updateIndex(@NotNull NucleusRepository repository, @NotNull Map<Path, String> addedFiles)
+            throws IOException, IndexFileCorruptException {
+        Map<Path, String> index = new HashMap<>();
+        Splitter onTabSplitter = Splitter.on('\t').omitEmptyStrings().trimResults();
+        if (!Files.exists(repository.getIndexFile())) {
+            throw new IndexFileCorruptException();
+        }
+        for (String line : Files.readAllLines(repository.getIndexFile())) {
+            String[] splitResult = onTabSplitter.splitToList(line).toArray(new String[1]);
+            if (splitResult.length != 2) {
+                throw new IndexFileCorruptException();
+            }
+            try {
+                index.put(Paths.get(splitResult[0]), splitResult[1]);
+            } catch (InvalidPathException e) {
+                throw new IndexFileCorruptException();
+            }
+        }
+        index.putAll(addedFiles);
+        Files.write(repository.getIndexFile(), index.entrySet().stream()
+                .map(entry -> entry.getKey().toString() + '\t' + entry.getValue())
+                .sorted()
+                .collect(Collectors.toList()));
+    }
+
+    public static void addToIndex(@NotNull Path path)
+            throws RepositoryNotInitializedException, IOException, IndexFileCorruptException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository;
         if (path.getParent() == null) {
@@ -44,6 +77,21 @@ public class NucleusManager {
             throw new RuntimeException("path.getParent() (\"" + path.getParent().toString() +
                     "\" should be a directory but is not");
         }
+        if (repository == null) {
+            throw new RepositoryNotInitializedException();
+        }
+        Map<Path, String> addedFiles = new HashMap<>();
+        Files.walk(path).forEach(filePath -> {
+            filePath = filePath.toAbsolutePath().normalize();
+            if (Files.isRegularFile(filePath) && !filePath.startsWith(repository.getRepositoryDirectory())) {
+                try {
+                    addedFiles.put(filePath, addFile(repository, filePath));
+                } catch (IOException e) {
+                    // some file was not added
+                }
+            }
+        });
+        updateIndex(repository, addedFiles);
     }
 
     public static void commitChanges(@NotNull Path path) {
