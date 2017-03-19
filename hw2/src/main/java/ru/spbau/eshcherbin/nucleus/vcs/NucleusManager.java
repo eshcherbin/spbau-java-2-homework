@@ -180,6 +180,11 @@ public class NucleusManager {
         }
     }
 
+    public static void newBranch(@NotNull Path path, @NotNull String name) {
+        //TODO: implement branch
+        throw new NotImplementedException();
+    }
+
     public static void checkoutRevision(@NotNull Path path, @NotNull String name) {
         //TODO: implement checkout
         throw new NotImplementedException();
