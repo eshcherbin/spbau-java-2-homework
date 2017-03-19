@@ -1,29 +1,72 @@
 package ru.spbau.eshcherbin.nucleus;
 
-import ru.spbau.eshcherbin.nucleus.vcs.DirectoryExpectedException;
-import ru.spbau.eshcherbin.nucleus.vcs.NucleusManager;
-import ru.spbau.eshcherbin.nucleus.vcs.RepositoryAlreadyInitializedException;
+import org.jetbrains.annotations.Nullable;
+import ru.spbau.eshcherbin.nucleus.vcs.*;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Objects;
 
 public class Main {
+    private static void printHelp(@Nullable String preMessage) {
+        if (preMessage != null) {
+            System.out.println(preMessage);
+        }
+        System.out.println("usage:\n       nucleus init [path]\n       nucleus add path\n       nucleus help");
+    }
+
+    private static void printHelp() {
+        printHelp(null);
+    }
+
     public static void main(String[] args) {
-        if (Objects.equals(args[0], "init")) {
-            Path path = Paths.get("").toAbsolutePath();
-            if (args.length >= 2) {
-                path = path.resolve(args[1]).normalize();
+        if (args.length == 0) {
+            printHelp("No arguments provided");
+            return;
+        }
+        switch (args[0]) {
+            case "init": {
+                Path path = Paths.get("").toAbsolutePath();
+                if (args.length >= 2) {
+                    path = path.resolve(args[1]).normalize();
+                }
+                try {
+                    NucleusManager.initRepository(path);
+                } catch (IOException e) {
+                    System.out.println("IO Error");
+                } catch (DirectoryExpectedException e) {
+                    System.out.println("Directory expected");
+                } catch (RepositoryAlreadyInitializedException e) {
+                    System.out.println("Repository already initialized");
+                }
+                break;
             }
-            try {
-                NucleusManager.initRepository(path);
-            } catch (IOException e) {
-                System.out.println("IO Error");
-            } catch (DirectoryExpectedException e) {
-                System.out.println("Directory expected");
-            } catch (RepositoryAlreadyInitializedException e) {
-                System.out.println("Repository already initialized");
+            case "add": {
+                Path path = Paths.get("").toAbsolutePath();
+                if (args.length >= 2) {
+                    path = path.resolve(args[1]).normalize();
+                } else {
+                    printHelp("No path provided");
+                    return;
+                }
+                try {
+                    NucleusManager.addToIndex(path);
+                } catch (RepositoryNotInitializedException e) {
+                    System.out.println("Repository not initialized");
+                } catch (IOException e) {
+                    System.out.println("IO Error");
+                } catch (IndexFileCorruptException e) {
+                    System.out.println("Index file corrupt");
+                }
+                break;
+            }
+            case "help": {
+                printHelp();
+                break;
+            }
+            default: {
+                printHelp("Unknown argument");
+                break;
             }
         }
     }

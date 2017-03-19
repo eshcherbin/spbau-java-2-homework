@@ -1,8 +1,6 @@
 package ru.spbau.eshcherbin.nucleus.vcs;
 
 import com.google.common.base.Splitter;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
@@ -26,17 +24,20 @@ public class NucleusManager {
         return repository;
     }
 
-    private static String addFile(@NotNull NucleusRepository repository, @NotNull Path filePath)
+    private static String addVCSObject(@NotNull NucleusRepository repository, @NotNull VCSObject object)
             throws IOException {
-        HashFunction sha1HashFunction = Hashing.sha1();
-        String sha1 = sha1HashFunction.newHasher().putBytes(Files.readAllBytes(filePath)).hash().toString();
         Path objectDirectoryPath = repository.getObjectsDirectory()
-                .resolve(sha1.substring(0, OBJECT_DIRECTORY_NAME_LENGTH));
+                .resolve(object.getSha().substring(0, OBJECT_DIRECTORY_NAME_LENGTH));
         if (!Files.exists(objectDirectoryPath)) {
             Files.createDirectory(objectDirectoryPath);
         }
-        Files.copy(filePath, objectDirectoryPath.resolve(sha1.substring(OBJECT_DIRECTORY_NAME_LENGTH)));
-        return sha1;
+        Files.write(objectDirectoryPath.resolve(object.getSha().substring(OBJECT_DIRECTORY_NAME_LENGTH)),
+                                                object.getContent());
+        return object.getSha();
+    }
+
+    private static String addFile(@NotNull NucleusRepository repository, @NotNull Path filePath) throws IOException {
+        return addVCSObject(repository, new VCSBlob(Files.readAllBytes(filePath), filePath.getFileName().toString()));
     }
 
     private static void updateIndex(@NotNull NucleusRepository repository, @NotNull Map<Path, String> addedFiles)
