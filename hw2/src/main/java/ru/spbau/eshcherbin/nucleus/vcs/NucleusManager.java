@@ -86,7 +86,7 @@ public class NucleusManager {
             filePath = filePath.toAbsolutePath().normalize();
             if (Files.isRegularFile(filePath) && !filePath.startsWith(repository.getRepositoryDirectory())) {
                 try {
-                    addedFiles.put(filePath, addFile(repository, filePath));
+                    addedFiles.put(repository.getRootDirectory().relativize(filePath), addFile(repository, filePath));
                 } catch (IOException e) {
                     // some file was not added
                 }

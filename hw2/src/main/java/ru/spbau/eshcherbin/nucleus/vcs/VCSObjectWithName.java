@@ -15,6 +15,6 @@ public abstract class VCSObjectWithName extends VCSObject implements Comparable<
 
     @Override
     public int compareTo(@NotNull VCSObjectWithName other) {
-        return (sha + " " + name).compareTo(other.sha + " " + other.name);
+        return (name + " " + sha).compareTo(other.name + " " + other.sha);
     }
 }
