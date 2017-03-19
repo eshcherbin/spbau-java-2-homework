@@ -7,20 +7,27 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.nio.file.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class NucleusManager {
     private static final int OBJECT_DIRECTORY_NAME_LENGTH = 2;
 
-    public static @NotNull NucleusRepository initRepository(@NotNull Path path)
-            throws IOException, DirectoryExpectedException, RepositoryAlreadyInitializedException {
-        NucleusRepository repository = NucleusRepository.createRepository(path);
-        Files.createDirectory(repository.getObjectsDirectory());
-        Files.createDirectory(repository.getReferencesDirectory());
-        Files.createFile(repository.getIndexFile());
-        Files.createFile(repository.getHeadFile());
+    private static @NotNull NucleusRepository resolveRepository(@NotNull Path path)
+            throws RepositoryNotInitializedException, IOException {
+        NucleusRepository repository;
+        if (path.getParent() == null) {
+            throw new RepositoryNotInitializedException();
+        }
+        try {
+            repository = NucleusRepository.findRepository(path.getParent());
+        } catch (DirectoryExpectedException e) {
+            throw new RuntimeException("path.getParent() (\"" + path.getParent().toString() +
+                    "\" should be a directory but is not");
+        }
+        if (repository == null) {
+            throw new RepositoryNotInitializedException();
+        }
         return repository;
     }
 
@@ -40,7 +47,8 @@ public class NucleusManager {
         return addVCSObject(repository, new VCSBlob(Files.readAllBytes(filePath), filePath.getFileName().toString()));
     }
 
-    private static void updateIndex(@NotNull NucleusRepository repository, @NotNull Map<Path, String> addedFiles)
+    private static void updateIndex(@NotNull NucleusRepository repository, @NotNull Map<Path, String> addedFiles,
+                                    @NotNull Set<Path> removedFiles)
             throws IOException, IndexFileCorruptException {
         Map<Path, String> index = new HashMap<>();
         Splitter onTabSplitter = Splitter.on('\t').omitEmptyStrings().trimResults();
@@ -59,28 +67,27 @@ public class NucleusManager {
             }
         }
         index.putAll(addedFiles);
+        index.keySet().removeAll(removedFiles);
         Files.write(repository.getIndexFile(), index.entrySet().stream()
                 .map(entry -> entry.getKey().toString() + '\t' + entry.getValue())
                 .sorted()
                 .collect(Collectors.toList()));
     }
 
+    public static @NotNull NucleusRepository initRepository(@NotNull Path path)
+            throws IOException, DirectoryExpectedException, RepositoryAlreadyInitializedException {
+        NucleusRepository repository = NucleusRepository.createRepository(path);
+        Files.createDirectory(repository.getObjectsDirectory());
+        Files.createDirectory(repository.getReferencesDirectory());
+        Files.createFile(repository.getIndexFile());
+        Files.createFile(repository.getHeadFile());
+        return repository;
+    }
+
     public static void addToIndex(@NotNull Path path)
             throws RepositoryNotInitializedException, IOException, IndexFileCorruptException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
-        NucleusRepository repository;
-        if (path.getParent() == null) {
-            throw new RepositoryNotInitializedException();
-        }
-        try {
-            repository = NucleusRepository.findRepository(path.getParent());
-        } catch (DirectoryExpectedException e) {
-            throw new RuntimeException("path.getParent() (\"" + path.getParent().toString() +
-                    "\" should be a directory but is not");
-        }
-        if (repository == null) {
-            throw new RepositoryNotInitializedException();
-        }
+        NucleusRepository repository = resolveRepository(path);
         Map<Path, String> addedFiles = new HashMap<>();
         Files.walk(path).forEach(filePath -> {
             filePath = filePath.toAbsolutePath().normalize();
@@ -92,7 +99,22 @@ public class NucleusManager {
                 }
             }
         });
-        updateIndex(repository, addedFiles);
+        updateIndex(repository, addedFiles, Collections.emptySet());
+    }
+
+    public static void removeFromIndex(@NotNull Path path)
+            throws IOException, RepositoryNotInitializedException, IndexFileCorruptException {
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        NucleusRepository repository = resolveRepository(path);
+        Set<Path> removedFiles = new HashSet<>();
+        Files.walk(path).forEach(filePath -> {
+            filePath = filePath.toAbsolutePath().normalize();
+            if (Files.isRegularFile(filePath) && !filePath.startsWith(repository.getRepositoryDirectory())) {
+                removedFiles.add(repository.getRootDirectory().relativize(filePath));
+            }
+        });
+        Files.delete(path);
+        updateIndex(repository, Collections.emptyMap(), removedFiles);
     }
 
     public static void commitChanges(@NotNull Path path) {

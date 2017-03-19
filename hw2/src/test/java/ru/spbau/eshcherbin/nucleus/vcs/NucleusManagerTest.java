@@ -12,9 +12,11 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.io.FileMatchers.anExistingDirectory;
 import static org.hamcrest.io.FileMatchers.anExistingFile;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class NucleusManagerTest {
     private static final int OBJECT_DIRECTORY_NAME_LENGTH = 2;
@@ -73,5 +75,18 @@ public class NucleusManagerTest {
         assertThat(indexLines.size(), is(1));
         assertThat(indexLines.get(0), is(repository.getRootDirectory().relativize(file).toString()
                 + '\t' + sha));
+    }
+
+    @Test
+    public void removeFromIndexTest() throws Exception {
+        repository = NucleusManager.initRepository(temporaryRootPath);
+        Path file = temporaryFolder.newFile().toPath();
+        byte[] content = "testContent".getBytes();
+        Files.write(file, content);
+        NucleusManager.addToIndex(file);
+        NucleusManager.removeFromIndex(file);
+        assertThat(file.toFile(), is(not(anExistingFile())));
+        List<String> indexLines = Files.readAllLines(repository.getIndexFile());
+        assertTrue(indexLines.isEmpty());
     }
 }

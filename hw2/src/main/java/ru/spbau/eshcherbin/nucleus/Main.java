@@ -12,7 +12,9 @@ public class Main {
         if (preMessage != null) {
             System.out.println(preMessage);
         }
-        System.out.println("usage:\n       nucleus init [path]\n       nucleus add path\n       nucleus help");
+        System.out.println("usage:" + "\n    nucleus init [path]" + "\n    nucleus add path" +
+                "    nucleus help" + "\n    nucleus remove path");
+        System.out.println("shortcuts:" + "\n    rm = remove");
     }
 
     private static void printHelp() {
@@ -51,6 +53,26 @@ public class Main {
                 }
                 try {
                     NucleusManager.addToIndex(path);
+                } catch (RepositoryNotInitializedException e) {
+                    System.out.println("Repository not initialized");
+                } catch (IOException e) {
+                    System.out.println("IO Error");
+                } catch (IndexFileCorruptException e) {
+                    System.out.println("Index file corrupt");
+                }
+                break;
+            }
+            case "remove":
+            case "rm": {
+                Path path = Paths.get("").toAbsolutePath();
+                if (args.length >= 2) {
+                    path = path.resolve(args[1]).normalize();
+                } else {
+                    printHelp("No path provided");
+                    return;
+                }
+                try {
+                    NucleusManager.removeFromIndex(path);
                 } catch (RepositoryNotInitializedException e) {
                     System.out.println("Repository not initialized");
                 } catch (IOException e) {
