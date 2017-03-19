@@ -17,17 +17,20 @@ public class VCSTree extends VCSObjectWithName {
         this.name = name;
     }
 
+    private @NotNull String getStringContent() {
+        return children.stream()
+                .map(child -> child.getType().toString() + "\t" +
+                        child.getSha() + '\t' +
+                        child.getName())
+                .collect(Collectors.joining("\n"));
+    }
+
     public void addChild(@NotNull VCSObjectWithName object) {
         children.add(object);
     }
 
     @Override
     public byte[] getContent() {
-        return children.stream()
-                       .map(child -> child.getType().toString() + "\t" +
-                                     child.getSha() + '\t' +
-                                     child.getName())
-                       .collect(Collectors.joining("\n"))
-                       .getBytes();
+        return getStringContent().getBytes();
     }
 }
