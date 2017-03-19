@@ -17,6 +17,10 @@ public class VCSTree extends VCSObjectWithName {
         this.name = name;
     }
 
+    public void addChild(@NotNull VCSObjectWithName object) {
+        children.add(object);
+    }
+
     @Override
     public byte[] getContent() {
         return children.stream()
