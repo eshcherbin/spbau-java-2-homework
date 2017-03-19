@@ -98,13 +98,20 @@ public class NucleusRepository {
         }
         List<String> headLines = Files.readAllLines(getHeadFile());
         if (headLines.size() == 0) {
-            return Constants.DEFAULT_BRANCH_NAME;
+            return Constants.REFERENCE_HEAD_PREFIX + Constants.DEFAULT_BRANCH_NAME;
         } else if (headLines.size() > 1) {
             throw new HeadFileCorruptException();
         } else {
             String head = headLines.get(0);
-            if (!Files.exists(getReferencesDirectory().resolve(head))) {
-                throw new HeadFileCorruptException();
+            if (head.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
+                String branchName = head.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+                if (!Files.exists(getReferencesDirectory().resolve(branchName))) {
+                    throw new HeadFileCorruptException();
+                }
+            } else {
+                if (!isValidSha(head)) {
+                    throw new HeadFileCorruptException();
+                }
             }
             return head;
         }

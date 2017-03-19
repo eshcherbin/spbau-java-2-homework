@@ -148,18 +148,36 @@ public class NucleusManager {
             DirectoryExpectedException, IndexFileCorruptException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
-        VCSTree tree = collectTreeFromIndex(repository);
-        addVCSObject(repository, tree);
-        VCSCommit commit = new VCSCommit(tree, message, System.getProperty(Constants.USER_NAME_PROPERTY),
-                                         System.currentTimeMillis());
-        addVCSObject(repository, commit);
-        String currentBranch = repository.getCurrentHead();
-        Files.write(repository.getHeadFile(), currentBranch.getBytes());
-        Path reference = repository.getReferencesDirectory().resolve(currentBranch);
-        if (!Files.exists(reference)) {
-            Files.createFile(reference);
+        String currentHead = repository.getCurrentHead();
+        if (currentHead.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
+            String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+            String parentSha = null;
+            Path reference = repository.getReferencesDirectory().resolve(currentBranch);
+            if (Files.exists(reference)) {
+                parentSha = Files.readAllLines(reference).get(0);
+            }
+            VCSTree tree = collectTreeFromIndex(repository);
+            addVCSObject(repository, tree);
+            VCSCommit commit = new VCSCommit(tree, message, System.getProperty(Constants.USER_NAME_PROPERTY),
+                    System.currentTimeMillis());
+            if (parentSha != null) {
+                commit.getParents().add(parentSha);
+            }
+            addVCSObject(repository, commit);
+            Files.write(repository.getHeadFile(), currentHead.getBytes());
+            if (!Files.exists(reference)) {
+                Files.createFile(reference);
+            }
+            Files.write(reference, commit.getSha().getBytes());
+        } else {
+            VCSTree tree = collectTreeFromIndex(repository);
+            addVCSObject(repository, tree);
+            VCSCommit commit = new VCSCommit(tree, message, System.getProperty(Constants.USER_NAME_PROPERTY),
+                    System.currentTimeMillis());
+            commit.getParents().add(currentHead);
+            String commitSha = addVCSObject(repository, commit);
+            Files.write(repository.getHeadFile(), commitSha.getBytes());
         }
-        Files.write(reference, commit.getSha().getBytes());
     }
 
     public static void checkoutRevision(@NotNull Path path, @NotNull String name) {

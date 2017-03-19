@@ -131,12 +131,13 @@ public class NucleusManagerTest {
         NucleusManager.addToIndex(file);
         NucleusManager.commitChanges(temporaryRootPath, "test commit message");
         String currentHead = repository.getCurrentHead();
-        assertThat(currentHead, is(Constants.DEFAULT_BRANCH_NAME));
-        List<String> currentHeadLines = Files.readAllLines(repository.getReferencesDirectory().resolve(currentHead));
+        assertThat(currentHead, is(Constants.REFERENCE_HEAD_PREFIX + Constants.DEFAULT_BRANCH_NAME));
+        String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+        List<String> currentHeadLines = Files.readAllLines(repository.getReferencesDirectory().resolve(currentBranch));
         assertThat(currentHeadLines.size(), is(1));
         String sha = currentHeadLines.get(0);
-        assertThat(repository.isValidSha(sha), is(true));
 
+        assertThat(repository.isValidSha(sha), is(true));
         List<String> commitLines = Files.readAllLines(repository.getObject(sha));
         assertThat(commitLines.size(), is(4));
         String treeSha = commitLines.get(0);
@@ -156,5 +157,50 @@ public class NucleusManagerTest {
         assertThat(vcsObjectWithName.getType(), is(VCSObjectType.BLOB));
         assertThat(vcsObjectWithName.getName(), is(file.getFileName().toString()));
         assertThat(repository.isValidSha(vcsObjectWithName.getSha()), is(true));
+    }
+
+    @Test
+    public void severalCommitsTest() throws Exception {
+        repository = NucleusManager.initRepository(temporaryRootPath);
+        Path file1 = temporaryFolder.newFile().toPath();
+        byte[] content1 = "testContent1".getBytes();
+        Files.write(file1, content1);
+        NucleusManager.addToIndex(file1);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+
+        String firstCommitSha;
+        {
+            String currentHead = repository.getCurrentHead();
+            String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+            List<String> currentHeadLines = Files.readAllLines(repository.getReferencesDirectory().resolve(currentBranch));
+            firstCommitSha = currentHeadLines.get(0);
+        }
+
+        Path file2 = temporaryFolder.newFile().toPath();
+        byte[] content2 = "testContent2".getBytes();
+        Files.write(file2, content2);
+        NucleusManager.addToIndex(file2);
+        NucleusManager.commitChanges(temporaryRootPath, "another test commit message");
+
+        String currentHead = repository.getCurrentHead();
+        assertThat(currentHead, is(Constants.REFERENCE_HEAD_PREFIX + Constants.DEFAULT_BRANCH_NAME));
+        String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+        List<String> currentHeadLines = Files.readAllLines(repository.getReferencesDirectory().resolve(currentBranch));
+        assertThat(currentHeadLines.size(), is(1));
+        String sha = currentHeadLines.get(0);
+
+        assertThat(repository.isValidSha(sha), is(true));
+        List<String> commitLines = Files.readAllLines(repository.getObject(sha));
+        assertThat(commitLines.size(), is(5));
+        String treeSha = commitLines.get(0);
+        String author = commitLines.get(1);
+        String timeString = commitLines.get(2);
+        String parent = commitLines.get(3);
+        String message = commitLines.get(4);
+        assertThat(repository.isValidSha(treeSha), is(true));
+        assertThat(author, is(System.getProperty(Constants.USER_NAME_PROPERTY)));
+        long time = Long.parseLong(timeString);
+        assertThat(parent, is(Constants.PARENT_COMMIT_PREFIX + firstCommitSha));
+        assertThat(message, is("another test commit message"));
     }
 }

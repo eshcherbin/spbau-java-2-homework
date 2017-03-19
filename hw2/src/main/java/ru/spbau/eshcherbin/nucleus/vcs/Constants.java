@@ -9,4 +9,6 @@ public class Constants {
     public static final String DEFAULT_BRANCH_NAME = "master";
     public static final String USER_NAME_PROPERTY = "user.name";
     public static final int OBJECT_DIRECTORY_NAME_LENGTH = 2;
+    public static final String REFERENCE_HEAD_PREFIX = "ref: ";
+    public static final String PARENT_COMMIT_PREFIX = "parent: ";
 }
