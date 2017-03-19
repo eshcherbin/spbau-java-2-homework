@@ -7,4 +7,6 @@ public class Constants {
     public static final String HEAD_FILE_NAME = "HEAD";
     public static final String INDEX_FILE_NAME = "index";
     public static final String DEFAULT_BRANCH_NAME = "master";
+    public static final String USER_NAME_PROPERTY = "user.name";
+    public static final int OBJECT_DIRECTORY_NAME_LENGTH = 2;
 }

@@ -91,7 +91,11 @@ public class NucleusRepository {
         return repositoryDirectory.resolve(Constants.HEAD_FILE_NAME);
     }
 
+    //TODO: add test
     public @NotNull String getCurrentHead() throws IOException, HeadFileCorruptException {
+        if (!Files.exists(getHeadFile())) {
+            throw new HeadFileCorruptException();
+        }
         List<String> headLines = Files.readAllLines(getHeadFile());
         if (headLines.size() == 0) {
             return Constants.DEFAULT_BRANCH_NAME;
@@ -104,6 +108,19 @@ public class NucleusRepository {
             }
             return head;
         }
+    }
+
+    //TODO: add test
+    public boolean isValidSha(@NotNull String sha) {
+        return sha.length() > Constants.OBJECT_DIRECTORY_NAME_LENGTH && Files.exists(getObject(sha));
+    }
+
+    //TODO: add test
+    //TODO: rewrite code using this method where needed
+    public Path getObject(@NotNull String sha) {
+        Path subDirectory =
+                getObjectsDirectory().resolve(sha.substring(0, Constants.OBJECT_DIRECTORY_NAME_LENGTH));
+        return subDirectory.resolve(sha.substring(Constants.OBJECT_DIRECTORY_NAME_LENGTH));
     }
 
     @Override

@@ -7,7 +7,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 public class VCSTree extends VCSObjectWithName {
-    private @NotNull Set<VCSObjectWithName> children;
+    protected @NotNull Set<VCSObjectWithName> children;
 
     public VCSTree(@NotNull String name) {
         super(name);

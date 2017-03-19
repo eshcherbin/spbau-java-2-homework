@@ -11,17 +11,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class NucleusManager {
-    private static final int OBJECT_DIRECTORY_NAME_LENGTH = 2;
-    private static final String USER_NAME_PROPERTY = "user.name";
-
     private static String addVCSObject(@NotNull NucleusRepository repository, @NotNull VCSObject object)
             throws IOException {
         Path objectDirectoryPath = repository.getObjectsDirectory()
-                .resolve(object.getSha().substring(0, OBJECT_DIRECTORY_NAME_LENGTH));
+                .resolve(object.getSha().substring(0, Constants.OBJECT_DIRECTORY_NAME_LENGTH));
         if (!Files.exists(objectDirectoryPath)) {
             Files.createDirectory(objectDirectoryPath);
         }
-        Files.write(objectDirectoryPath.resolve(object.getSha().substring(OBJECT_DIRECTORY_NAME_LENGTH)),
+        Files.write(objectDirectoryPath.resolve(object.getSha().substring(Constants.OBJECT_DIRECTORY_NAME_LENGTH)),
                                                 object.getContent());
         return object.getSha();
     }
@@ -30,25 +27,31 @@ public class NucleusManager {
         return addVCSObject(repository, new VCSBlob(Files.readAllBytes(filePath), filePath.getFileName().toString()));
     }
 
-    private static void updateIndex(@NotNull NucleusRepository repository, @NotNull Map<Path, String> addedFiles,
-                                    @NotNull Set<Path> removedFiles)
-            throws IOException, IndexFileCorruptException {
+    private static @NotNull Map<Path, String> readIndexFile(@NotNull NucleusRepository repository)
+            throws IndexFileCorruptException, IOException {
         Map<Path, String> index = new HashMap<>();
         Splitter onTabSplitter = Splitter.on('\t').omitEmptyStrings().trimResults();
         if (!Files.exists(repository.getIndexFile())) {
             throw new IndexFileCorruptException();
         }
         for (String line : Files.readAllLines(repository.getIndexFile())) {
-            String[] splitResult = onTabSplitter.splitToList(line).toArray(new String[1]);
-            if (splitResult.length != 2) {
+            List<String> splitResult = onTabSplitter.splitToList(line);
+            if (splitResult.size() != 2 || !repository.isValidSha(splitResult.get(1))) {
                 throw new IndexFileCorruptException();
             }
             try {
-                index.put(Paths.get(splitResult[0]), splitResult[1]);
+                index.put(Paths.get(splitResult.get(0)), splitResult.get(1));
             } catch (InvalidPathException e) {
                 throw new IndexFileCorruptException();
             }
         }
+        return index;
+    }
+
+    private static void updateIndex(@NotNull NucleusRepository repository, @NotNull Map<Path, String> addedFiles,
+                                    @NotNull Set<Path> removedFiles)
+            throws IOException, IndexFileCorruptException {
+        Map<Path, String> index = readIndexFile(repository);
         index.putAll(addedFiles);
         index.keySet().removeAll(removedFiles);
         Files.write(repository.getIndexFile(), index.entrySet().stream()
@@ -57,8 +60,32 @@ public class NucleusManager {
                 .collect(Collectors.toList()));
     }
 
-    private static @NotNull VCSTree collectTree(@NotNull NucleusRepository repository) {
-        return new VCSTree("");
+    private static @NotNull VCSTree collectTreeFromIndex(@NotNull NucleusRepository repository)
+            throws IndexFileCorruptException, IOException {
+        Map<Path, String> index = readIndexFile(repository);
+        Map<Path, VCSTree> pathToTree = new HashMap<>();
+        pathToTree.put(Paths.get(""), new VCSTree(""));
+        for (Path path : index.keySet()) {
+            for (Path prefixPath : path) {
+                Path parent = prefixPath.getParent();
+                if (parent == null) {
+                    parent = Paths.get("");
+                }
+                Path name = prefixPath.getFileName();
+                if (prefixPath.equals(path)) {
+                    pathToTree.get(parent).addChild(
+                            new VCSObjectWithNameAndKnownSha(
+                                    name.toString(),
+                                    index.get(path),
+                                    VCSObjectType.BLOB
+                            )
+                    );
+                } else if (!pathToTree.containsKey(prefixPath)) {
+                    pathToTree.put(prefixPath, new VCSTree(name.toString()));
+                }
+            }
+        }
+        return pathToTree.get(Paths.get(""));
     }
 
     public static @NotNull NucleusRepository initRepository(@NotNull Path path)
@@ -118,11 +145,12 @@ public class NucleusManager {
 
     public static void commitChanges(@NotNull Path path, @NotNull String message)
             throws IOException, RepositoryNotInitializedException, HeadFileCorruptException,
-            DirectoryExpectedException {
+            DirectoryExpectedException, IndexFileCorruptException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
-        VCSTree tree = collectTree(repository);
-        VCSCommit commit = new VCSCommit(tree, message, System.getProperty(USER_NAME_PROPERTY),
+        VCSTree tree = collectTreeFromIndex(repository);
+        addVCSObject(repository, tree);
+        VCSCommit commit = new VCSCommit(tree, message, System.getProperty(Constants.USER_NAME_PROPERTY),
                                          System.currentTimeMillis());
         addVCSObject(repository, commit);
         String currentBranch = repository.getCurrentHead();

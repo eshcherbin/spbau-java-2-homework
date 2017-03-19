@@ -104,6 +104,8 @@ public class Main {
                     printError("Repository not initialized");
                 } catch (HeadFileCorruptException e) {
                     printError("HEAD file is corrupt");
+                } catch (IndexFileCorruptException e) {
+                    printError("Index file is corrupt");
                 }
                 break;
             }
