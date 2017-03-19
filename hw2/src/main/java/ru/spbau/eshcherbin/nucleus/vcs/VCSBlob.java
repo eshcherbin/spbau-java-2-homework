@@ -1,7 +1,5 @@
 package ru.spbau.eshcherbin.nucleus.vcs;
 
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
 import org.jetbrains.annotations.NotNull;
 
 public class VCSBlob extends VCSObjectWithName {
@@ -11,8 +9,6 @@ public class VCSBlob extends VCSObjectWithName {
         super(name);
         type = VCSObjectType.BLOB;
         this.content = content;
-        HashFunction sha1HashFunction = Hashing.sha1();
-        sha = sha1HashFunction.newHasher().putBytes(content).hash().toString();
     }
 
     @Override

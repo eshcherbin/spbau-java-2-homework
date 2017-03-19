@@ -6,4 +6,5 @@ public class Constants {
     public static final String REFERENCES_DIRECTORY_NAME = "refs";
     public static final String HEAD_FILE_NAME = "HEAD";
     public static final String INDEX_FILE_NAME = "index";
+    public static final String DEFAULT_BRANCH_NAME = "master";
 }

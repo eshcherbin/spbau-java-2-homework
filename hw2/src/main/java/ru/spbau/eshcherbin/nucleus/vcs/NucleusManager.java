@@ -12,24 +12,7 @@ import java.util.stream.Collectors;
 
 public class NucleusManager {
     private static final int OBJECT_DIRECTORY_NAME_LENGTH = 2;
-
-    private static @NotNull NucleusRepository resolveRepository(@NotNull Path path)
-            throws RepositoryNotInitializedException, IOException {
-        NucleusRepository repository;
-        if (path.getParent() == null) {
-            throw new RepositoryNotInitializedException();
-        }
-        try {
-            repository = NucleusRepository.findRepository(path.getParent());
-        } catch (DirectoryExpectedException e) {
-            throw new RuntimeException("path.getParent() (\"" + path.getParent().toString() +
-                    "\" should be a directory but is not");
-        }
-        if (repository == null) {
-            throw new RepositoryNotInitializedException();
-        }
-        return repository;
-    }
+    private static final String USER_NAME_PROPERTY = "user.name";
 
     private static String addVCSObject(@NotNull NucleusRepository repository, @NotNull VCSObject object)
             throws IOException {
@@ -74,6 +57,10 @@ public class NucleusManager {
                 .collect(Collectors.toList()));
     }
 
+    private static @NotNull VCSTree collectTree(@NotNull NucleusRepository repository) {
+        return new VCSTree("");
+    }
+
     public static @NotNull NucleusRepository initRepository(@NotNull Path path)
             throws IOException, DirectoryExpectedException, RepositoryAlreadyInitializedException {
         NucleusRepository repository = NucleusRepository.createRepository(path);
@@ -87,7 +74,7 @@ public class NucleusManager {
     public static void addToIndex(@NotNull Path path)
             throws RepositoryNotInitializedException, IOException, IndexFileCorruptException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
-        NucleusRepository repository = resolveRepository(path);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path);
         Map<Path, String> addedFiles = new HashMap<>();
         Files.walk(path).forEach(filePath -> {
             filePath = filePath.toAbsolutePath().normalize();
@@ -105,7 +92,7 @@ public class NucleusManager {
     public static void removeFromIndex(@NotNull Path path)
             throws IOException, RepositoryNotInitializedException, IndexFileCorruptException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
-        NucleusRepository repository = resolveRepository(path);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path);
         Set<Path> removedFiles = new HashSet<>();
         Files.walk(path).forEach(filePath -> {
             filePath = filePath.toAbsolutePath().normalize();
@@ -117,9 +104,21 @@ public class NucleusManager {
         updateIndex(repository, Collections.emptyMap(), removedFiles);
     }
 
-    public static void commitChanges(@NotNull Path path) {
-        //TODO: implement commit
-        throw new NotImplementedException();
+    public static void commitChanges(@NotNull Path path, @NotNull String message)
+            throws IOException, RepositoryNotInitializedException, HeadFileCorruptException {
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path);
+        VCSTree tree = collectTree(repository);
+        VCSCommit commit = new VCSCommit(tree, message, System.getProperty(USER_NAME_PROPERTY),
+                                         System.currentTimeMillis());
+        addVCSObject(repository, commit);
+        String currentBranch = repository.getCurrentHead();
+        Files.write(repository.getHeadFile(), currentBranch.getBytes());
+        Path reference = repository.getReferencesDirectory().resolve(currentBranch);
+        if (!Files.exists(reference)) {
+            Files.createFile(reference);
+        }
+        Files.write(reference, commit.getSha().getBytes());
     }
 
     public static void checkoutRevision(@NotNull Path path, @NotNull String name) {

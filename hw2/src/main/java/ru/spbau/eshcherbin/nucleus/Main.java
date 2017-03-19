@@ -78,7 +78,25 @@ public class Main {
                 } catch (IOException e) {
                     System.out.println("IO Error");
                 } catch (IndexFileCorruptException e) {
-                    System.out.println("Index file corrupt");
+                    System.out.println("Index file is corrupt");
+                }
+                break;
+            }
+            case "commit":
+            case "ci": {
+                Path path = Paths.get("").toAbsolutePath();
+                if (args.length < 2) {
+                    printHelp("No commit message provided");
+                }
+                String message = args[1];
+                try {
+                    NucleusManager.commitChanges(path, message);
+                } catch (IOException e) {
+                    System.out.println("IO Error");
+                } catch (RepositoryNotInitializedException e) {
+                    System.out.println("Repository not initialized");
+                } catch (HeadFileCorruptException e) {
+                    System.out.println("HEAD file is corrupt");
                 }
                 break;
             }
