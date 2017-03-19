@@ -44,17 +44,22 @@ public class NucleusRepository {
         return new NucleusRepository(repositoryDirectory);
     }
 
-    public static @NotNull NucleusRepository resolveRepository(@NotNull Path path)
-            throws RepositoryNotInitializedException, IOException {
+    //TODO: add test
+    public static @NotNull NucleusRepository resolveRepository(@NotNull Path path, boolean startFromParent)
+            throws RepositoryNotInitializedException, IOException, DirectoryExpectedException {
         NucleusRepository repository;
         if (path.getParent() == null) {
             throw new RepositoryNotInitializedException();
         }
         try {
-            repository = findRepository(path.getParent());
+            repository = findRepository(startFromParent ? path.getParent() : path);
         } catch (DirectoryExpectedException e) {
-            throw new RuntimeException("path.getParent() (\"" + path.getParent().toString() +
-                    "\" should be a directory but is not");
+            if (startFromParent) {
+                throw new RuntimeException("path.getParent() (\"" + path.getParent().toString() +
+                        "\" should be a directory but is not");
+            } else {
+                throw e;
+            }
         }
         if (repository == null) {
             throw new RepositoryNotInitializedException();

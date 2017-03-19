@@ -74,7 +74,13 @@ public class NucleusManager {
     public static void addToIndex(@NotNull Path path)
             throws RepositoryNotInitializedException, IOException, IndexFileCorruptException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
-        NucleusRepository repository = NucleusRepository.resolveRepository(path);
+        NucleusRepository repository;
+        try {
+            repository = NucleusRepository.resolveRepository(path, true);
+        } catch (DirectoryExpectedException e) {
+            throw new RuntimeException("resolveRepository throws DirectoryExpectedException from addToIndex" +
+                    ", this should not happen");
+        }
         Map<Path, String> addedFiles = new HashMap<>();
         Files.walk(path).forEach(filePath -> {
             filePath = filePath.toAbsolutePath().normalize();
@@ -92,7 +98,13 @@ public class NucleusManager {
     public static void removeFromIndex(@NotNull Path path)
             throws IOException, RepositoryNotInitializedException, IndexFileCorruptException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
-        NucleusRepository repository = NucleusRepository.resolveRepository(path);
+        NucleusRepository repository;
+        try {
+            repository = NucleusRepository.resolveRepository(path, true);
+        } catch (DirectoryExpectedException e) {
+            throw new RuntimeException("resolveRepository throws DirectoryExpectedException from removeFromIndex" +
+                    ", this should not happen");
+        }
         Set<Path> removedFiles = new HashSet<>();
         Files.walk(path).forEach(filePath -> {
             filePath = filePath.toAbsolutePath().normalize();
@@ -105,9 +117,10 @@ public class NucleusManager {
     }
 
     public static void commitChanges(@NotNull Path path, @NotNull String message)
-            throws IOException, RepositoryNotInitializedException, HeadFileCorruptException {
+            throws IOException, RepositoryNotInitializedException, HeadFileCorruptException,
+            DirectoryExpectedException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
-        NucleusRepository repository = NucleusRepository.resolveRepository(path);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
         VCSTree tree = collectTree(repository);
         VCSCommit commit = new VCSCommit(tree, message, System.getProperty(USER_NAME_PROPERTY),
                                          System.currentTimeMillis());

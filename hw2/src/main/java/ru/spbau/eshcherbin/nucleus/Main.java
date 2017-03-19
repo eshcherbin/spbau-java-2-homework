@@ -97,7 +97,8 @@ public class Main {
                 String message = args[1];
                 try {
                     NucleusManager.commitChanges(path, message);
-                } catch (IOException e) {
+                } catch (IOException | DirectoryExpectedException e) {
+                    // DirectoryExpectedException should not be thrown here
                     printError("IO Error");
                 } catch (RepositoryNotInitializedException e) {
                     printError("Repository not initialized");
