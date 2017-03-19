@@ -1,5 +1,6 @@
 package ru.spbau.eshcherbin.nucleus;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.spbau.eshcherbin.nucleus.vcs.*;
 
@@ -12,13 +13,17 @@ public class Main {
         if (preMessage != null) {
             System.out.println(preMessage);
         }
-        System.out.println("usage:" + "\n    nucleus init [path]" + "\n    nucleus add path" +
-                "    nucleus help" + "\n    nucleus remove path");
-        System.out.println("shortcuts:" + "\n    rm = remove");
+        System.out.println("usage:" + "\n    nucleus init [<path>]" + "\n    nucleus add <path>"
+                 + "\n    nucleus remove <path>" + "\n    nucleus commit <message>" + "\n    nucleus help");
+        System.out.println("shortcuts:" + "\n    rm = remove" + "\n    ci = commit");
     }
 
     private static void printHelp() {
         printHelp(null);
+    }
+
+    private static void printError(@NotNull String errorMessage) {
+        System.err.println("Error: " + errorMessage);
     }
 
     public static void main(String[] args) {
@@ -35,11 +40,11 @@ public class Main {
                 try {
                     NucleusManager.initRepository(path);
                 } catch (IOException e) {
-                    System.out.println("IO Error");
+                    printError("IO Error");
                 } catch (DirectoryExpectedException e) {
-                    System.out.println("Directory expected");
+                    printError("Directory expected");
                 } catch (RepositoryAlreadyInitializedException e) {
-                    System.out.println("Repository already initialized");
+                    printError("Repository already initialized");
                 }
                 break;
             }
@@ -54,11 +59,11 @@ public class Main {
                 try {
                     NucleusManager.addToIndex(path);
                 } catch (RepositoryNotInitializedException e) {
-                    System.out.println("Repository not initialized");
+                    printError("Repository not initialized");
                 } catch (IOException e) {
-                    System.out.println("IO Error");
+                    printError("IO Error");
                 } catch (IndexFileCorruptException e) {
-                    System.out.println("Index file corrupt");
+                    printError("Index file corrupt");
                 }
                 break;
             }
@@ -74,11 +79,11 @@ public class Main {
                 try {
                     NucleusManager.removeFromIndex(path);
                 } catch (RepositoryNotInitializedException e) {
-                    System.out.println("Repository not initialized");
+                    printError("Repository not initialized");
                 } catch (IOException e) {
-                    System.out.println("IO Error");
+                    printError("IO Error");
                 } catch (IndexFileCorruptException e) {
-                    System.out.println("Index file is corrupt");
+                    printError("Index file is corrupt");
                 }
                 break;
             }
@@ -87,16 +92,17 @@ public class Main {
                 Path path = Paths.get("").toAbsolutePath();
                 if (args.length < 2) {
                     printHelp("No commit message provided");
+                    return;
                 }
                 String message = args[1];
                 try {
                     NucleusManager.commitChanges(path, message);
                 } catch (IOException e) {
-                    System.out.println("IO Error");
+                    printError("IO Error");
                 } catch (RepositoryNotInitializedException e) {
-                    System.out.println("Repository not initialized");
+                    printError("Repository not initialized");
                 } catch (HeadFileCorruptException e) {
-                    System.out.println("HEAD file is corrupt");
+                    printError("HEAD file is corrupt");
                 }
                 break;
             }
