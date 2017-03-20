@@ -180,9 +180,23 @@ public class NucleusManager {
         }
     }
 
-    public static void newBranch(@NotNull Path path, @NotNull String name) {
-        //TODO: implement branch
-        throw new NotImplementedException();
+    public static void newBranch(@NotNull Path path, @NotNull String branchName)
+            throws IOException, RepositoryNotInitializedException, DirectoryExpectedException,
+            HeadFileCorruptException, BranchAlreadyExistsException {
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
+        Path newReference = repository.getReferencesDirectory().resolve(branchName);
+        if (Files.exists(newReference)) {
+            throw new BranchAlreadyExistsException();
+        }
+        String currentHead = repository.getCurrentHead();
+        if (currentHead.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
+            String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+            Files.copy(repository.getReferencesDirectory().resolve(currentBranch), newReference);
+        } else {
+            Files.write(newReference, currentHead.getBytes());
+        }
+        Files.write(repository.getHeadFile(), (Constants.REFERENCE_HEAD_PREFIX + branchName).getBytes());
     }
 
     public static void checkoutRevision(@NotNull Path path, @NotNull String name) {

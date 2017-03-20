@@ -14,7 +14,8 @@ public class Main {
             System.out.println(preMessage);
         }
         System.out.println("usage:" + "\n    nucleus init [<path>]" + "\n    nucleus add <path>"
-                 + "\n    nucleus remove <path>" + "\n    nucleus commit <message>" + "\n    nucleus help");
+                 + "\n    nucleus remove <path>" + "\n    nucleus commit <message>" + "\n    nucleus help"
+                 + "\n    nucleus branch <branchName>");
         System.out.println("shortcuts:" + "\n    rm = remove" + "\n    ci = commit");
     }
 
@@ -106,6 +107,27 @@ public class Main {
                     printError("HEAD file is corrupt");
                 } catch (IndexFileCorruptException e) {
                     printError("Index file is corrupt");
+                }
+                break;
+            }
+            case "branch": {
+                Path path = Paths.get("").toAbsolutePath();
+                if (args.length < 2) {
+                    printHelp("No branch name provided");
+                    return;
+                }
+                String branchName = args[1];
+                try {
+                    NucleusManager.newBranch(path, branchName);
+                } catch (IOException | DirectoryExpectedException e) {
+                    // DirectoryExpectedException should not be thrown here
+                    printError("IO Error");
+                } catch (RepositoryNotInitializedException e) {
+                    printError("Repository not initialized");
+                } catch (HeadFileCorruptException e) {
+                    printError("HEAD file is corrupt");
+                } catch (BranchAlreadyExistsException e) {
+                    printError("Branch " + branchName + " already exists");
                 }
                 break;
             }
