@@ -88,6 +88,11 @@ public class NucleusManager {
         return pathToTree.get(Paths.get(""));
     }
 
+    private static @NotNull VCSCommit readCommit(@NotNull String headCommitSha) {
+        //TODO: implement reading commit from file
+        throw new NotImplementedException();
+    }
+
     public static @NotNull NucleusRepository initRepository(@NotNull Path path)
             throws IOException, DirectoryExpectedException, RepositoryAlreadyInitializedException {
         NucleusRepository repository = NucleusRepository.createRepository(path);
@@ -199,13 +204,50 @@ public class NucleusManager {
         Files.write(repository.getHeadFile(), (Constants.REFERENCE_HEAD_PREFIX + branchName).getBytes());
     }
 
-    public static void checkoutRevision(@NotNull Path path, @NotNull String name) {
-        //TODO: implement checkout
-        throw new NotImplementedException();
+    public static @Nullable LogMessage getLog(@NotNull Path path)
+            throws IOException, RepositoryNotInitializedException, DirectoryExpectedException,
+            HeadFileCorruptException {
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
+        String currentHead = repository.getCurrentHead();
+        String headCommitSha;
+        if (currentHead.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
+            String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+            Path currentBranchReference = repository.getReferencesDirectory().resolve(currentBranch);
+            if (!Files.exists(currentBranchReference)) {
+                throw new HeadFileCorruptException();
+            }
+            headCommitSha = Files.readAllLines(currentBranchReference).get(0);
+        } else {
+            headCommitSha = currentHead;
+        }
+        VCSCommit headCommit = readCommit(headCommitSha);
+        // breadth-first commit graph traversal
+        Set<String> presentShas = new HashSet<>();
+        presentShas.add(headCommitSha);
+        Queue<VCSCommit> queue = new LinkedList<>();
+        queue.add(headCommit);
+        List<VCSCommit> commits = new ArrayList<>();
+        while (!queue.isEmpty()) {
+            VCSCommit commit = queue.remove();
+            commits.add(commit);
+            for (String parentSha : commit.getParents()) {
+                if (!presentShas.contains(parentSha)) {
+                    presentShas.add(parentSha);
+                    queue.add(readCommit(parentSha));
+                }
+            }
+        }
+        commits.sort(Comparator.comparingLong(VCSCommit::getTimeInMilliseconds));
+        LogMessage currentLogMessage = null;
+        for (VCSCommit commit : commits) {
+            currentLogMessage = new LogMessage(commit, currentLogMessage);
+        }
+        return currentLogMessage;
     }
 
-    public static @Nullable LogMessage getLog(@NotNull Path path) {
-        //TODO: implement log
+    public static void checkoutRevision(@NotNull Path path, @NotNull String name) {
+        //TODO: implement checkout
         throw new NotImplementedException();
     }
 
