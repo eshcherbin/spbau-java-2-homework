@@ -203,4 +203,31 @@ public class NucleusManagerTest {
         assertThat(parent, is(Constants.PARENT_COMMIT_PREFIX + firstCommitSha));
         assertThat(message, is("another test commit message"));
     }
+
+    @Test(expected = BranchAlreadyExistsException.class)
+    public void newBranchExistingBranchTest() throws Exception {
+        repository = NucleusManager.initRepository(temporaryRootPath);
+        Path file1 = temporaryFolder.newFile().toPath();
+        byte[] content1 = "testContent1".getBytes();
+        Files.write(file1, content1);
+        NucleusManager.addToIndex(file1);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+        NucleusManager.newBranch(temporaryRootPath, Constants.DEFAULT_BRANCH_NAME);
+    }
+
+    @Test
+    public void newBranchTest() throws Exception {
+        repository = NucleusManager.initRepository(temporaryRootPath);
+        Path file1 = temporaryFolder.newFile().toPath();
+        byte[] content1 = "testContent1".getBytes();
+        Files.write(file1, content1);
+        NucleusManager.addToIndex(file1);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+
+        String branchName = "branch";
+        NucleusManager.newBranch(temporaryRootPath, branchName);
+        assertThat(repository.getCurrentHead(), is(Constants.REFERENCE_HEAD_PREFIX + branchName));
+        assertThat(Files.readAllBytes(repository.getReferencesDirectory().resolve(branchName)),
+                is(Files.readAllBytes(repository.getReferencesDirectory().resolve(Constants.DEFAULT_BRANCH_NAME))));
+    }
 }
