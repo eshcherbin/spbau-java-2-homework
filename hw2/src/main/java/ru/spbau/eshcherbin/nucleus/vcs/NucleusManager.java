@@ -88,9 +88,53 @@ public class NucleusManager {
         return pathToTree.get(Paths.get(""));
     }
 
-    private static @NotNull VCSCommit readCommit(@NotNull String headCommitSha) {
-        //TODO: implement reading commit from file
-        throw new NotImplementedException();
+    private static @NotNull VCSCommit readCommit(@NotNull NucleusRepository repository, @NotNull String commitSha)
+            throws ObjectsCorruptException, IOException {
+        if (!repository.isValidSha(commitSha)) {
+            throw new ObjectsCorruptException();
+        }
+        List<String> commitLines = Files.readAllLines(repository.getObject(commitSha));
+        if (commitLines.size() < 4) {
+            throw new ObjectsCorruptException();
+        }
+        String treeSha = commitLines.get(0);
+        if (!repository.isValidSha(treeSha)) {
+            throw new ObjectsCorruptException();
+        }
+        String author = commitLines.get(1);
+        String timeInMillisecondsString = commitLines.get(2);
+        long timeInMilliseconds;
+        try {
+             timeInMilliseconds = Long.parseLong(timeInMillisecondsString);
+        } catch (NumberFormatException e) {
+            throw new ObjectsCorruptException();
+        }
+        int messageStartLineIndex = 3;
+        while (messageStartLineIndex < commitLines.size() &&
+                !commitLines.get(messageStartLineIndex).startsWith(Constants.MESSAGE_COMMIT_PREFIX)) {
+            ++messageStartLineIndex;
+        }
+        if (messageStartLineIndex == commitLines.size()) {
+            throw new ObjectsCorruptException();
+        }
+        StringBuilder messageBuilder = new StringBuilder(commitLines.get(messageStartLineIndex)
+                .substring(Constants.MESSAGE_COMMIT_PREFIX.length()));
+        for (int i = messageStartLineIndex + 1; i < commitLines.size(); ++i) {
+            messageBuilder.append('\n');
+            messageBuilder.append(commitLines.get(i));
+        }
+        String message = messageBuilder.toString();
+        VCSCommit commit = new VCSCommit(treeSha, message, author, timeInMilliseconds);
+        Set<String> parentShaSet = commit.getParents();
+        for (int i = 3; i < messageStartLineIndex; ++i) {
+            String line = commitLines.get(i);
+            if (!line.startsWith(Constants.PARENT_COMMIT_PREFIX) ||
+                    !repository.isValidSha(line.substring(Constants.PARENT_COMMIT_PREFIX.length()))) {
+                throw new ObjectsCorruptException();
+            }
+            parentShaSet.add(line.substring(Constants.PARENT_COMMIT_PREFIX.length()));
+        }
+        return commit;
     }
 
     public static @NotNull NucleusRepository initRepository(@NotNull Path path)
@@ -163,7 +207,7 @@ public class NucleusManager {
             }
             VCSTree tree = collectTreeFromIndex(repository);
             addVCSObject(repository, tree);
-            VCSCommit commit = new VCSCommit(tree, message, System.getProperty(Constants.USER_NAME_PROPERTY),
+            VCSCommit commit = new VCSCommit(tree.getSha(), message, System.getProperty(Constants.USER_NAME_PROPERTY),
                     System.currentTimeMillis());
             if (parentSha != null) {
                 commit.getParents().add(parentSha);
@@ -177,7 +221,7 @@ public class NucleusManager {
         } else {
             VCSTree tree = collectTreeFromIndex(repository);
             addVCSObject(repository, tree);
-            VCSCommit commit = new VCSCommit(tree, message, System.getProperty(Constants.USER_NAME_PROPERTY),
+            VCSCommit commit = new VCSCommit(tree.getSha(), message, System.getProperty(Constants.USER_NAME_PROPERTY),
                     System.currentTimeMillis());
             commit.getParents().add(currentHead);
             String commitSha = addVCSObject(repository, commit);
@@ -204,27 +248,26 @@ public class NucleusManager {
         Files.write(repository.getHeadFile(), (Constants.REFERENCE_HEAD_PREFIX + branchName).getBytes());
     }
 
-    public static @Nullable LogMessage getLog(@NotNull Path path)
+    public static @Nullable LogMessage getLog(@NotNull Path path, @NotNull String revisionName)
             throws IOException, RepositoryNotInitializedException, DirectoryExpectedException,
-            HeadFileCorruptException {
+            HeadFileCorruptException, ObjectsCorruptException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
-        String currentHead = repository.getCurrentHead();
         String headCommitSha;
-        if (currentHead.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
-            String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+        if (revisionName.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
+            String currentBranch = revisionName.substring(Constants.REFERENCE_HEAD_PREFIX.length());
             Path currentBranchReference = repository.getReferencesDirectory().resolve(currentBranch);
             if (!Files.exists(currentBranchReference)) {
                 throw new HeadFileCorruptException();
             }
             headCommitSha = Files.readAllLines(currentBranchReference).get(0);
         } else {
-            headCommitSha = currentHead;
+            headCommitSha = revisionName;
         }
-        VCSCommit headCommit = readCommit(headCommitSha);
+        VCSCommit headCommit = readCommit(repository, headCommitSha);
         // breadth-first commit graph traversal
-        Set<String> presentShas = new HashSet<>();
-        presentShas.add(headCommitSha);
+        Set<String> presentShaSet = new HashSet<>();
+        presentShaSet.add(headCommitSha);
         Queue<VCSCommit> queue = new LinkedList<>();
         queue.add(headCommit);
         List<VCSCommit> commits = new ArrayList<>();
@@ -232,9 +275,9 @@ public class NucleusManager {
             VCSCommit commit = queue.remove();
             commits.add(commit);
             for (String parentSha : commit.getParents()) {
-                if (!presentShas.contains(parentSha)) {
-                    presentShas.add(parentSha);
-                    queue.add(readCommit(parentSha));
+                if (!presentShaSet.contains(parentSha)) {
+                    presentShaSet.add(parentSha);
+                    queue.add(readCommit(repository, parentSha));
                 }
             }
         }
@@ -244,6 +287,15 @@ public class NucleusManager {
             currentLogMessage = new LogMessage(commit, currentLogMessage);
         }
         return currentLogMessage;
+    }
+
+    public static @Nullable LogMessage getLog(@NotNull Path path)
+            throws IOException, RepositoryNotInitializedException, DirectoryExpectedException,
+            HeadFileCorruptException, ObjectsCorruptException {
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
+        String currentHead = repository.getCurrentHead();
+        return getLog(path, currentHead);
     }
 
     public static void checkoutRevision(@NotNull Path path, @NotNull String name) {

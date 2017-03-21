@@ -7,14 +7,15 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class VCSCommit extends VCSObject {
-    private @NotNull VCSTree tree;
+    private @NotNull String treeSha;
     private @NotNull String message;
     private @NotNull String author;
     private long timeInMilliseconds;
     private @NotNull Set<String> parents;
 
-    public VCSCommit(@NotNull VCSTree tree, @NotNull String message, @NotNull String author, long timeInMilliseconds) {
-        this.tree = tree;
+    public VCSCommit(@NotNull String treeSha, @NotNull String message,
+                     @NotNull String author, long timeInMilliseconds) {
+        this.treeSha = treeSha;
         type = VCSObjectType.COMMIT;
         this.message = message;
         this.author = author;
@@ -22,8 +23,8 @@ public class VCSCommit extends VCSObject {
         parents = new HashSet<>();
     }
 
-    public @NotNull VCSTree getTree() {
-        return tree;
+    public @NotNull String getTreeSha() {
+        return treeSha;
     }
 
     public @NotNull String getMessage() {
@@ -46,8 +47,9 @@ public class VCSCommit extends VCSObject {
         String parentsString = getParents().stream()
                 .map(parent -> Constants.PARENT_COMMIT_PREFIX + parent)
                 .collect(Collectors.joining("\n"));
-        return getTree().getSha() + '\n' + getAuthor() + '\n' + getTimeInMilliseconds() +
-                (parentsString.isEmpty() ? "" : '\n' + parentsString) + '\n' + getMessage();
+        return getTreeSha() + '\n' + getAuthor() + '\n' + getTimeInMilliseconds() +
+                (parentsString.isEmpty() ? "" : '\n' + parentsString) + '\n' +
+                Constants.MESSAGE_COMMIT_PREFIX + getMessage();
     }
 
     @Override

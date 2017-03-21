@@ -25,6 +25,7 @@ public class Main {
 
     private static void printError(@NotNull String errorMessage) {
         System.err.println("Error: " + errorMessage);
+        System.exit(1);
     }
 
     public static void main(String[] args) {
@@ -128,6 +129,30 @@ public class Main {
                     printError("HEAD file is corrupt");
                 } catch (BranchAlreadyExistsException e) {
                     printError("Branch " + branchName + " already exists");
+                }
+                break;
+            }
+            case "log": {
+                Path path = Paths.get("").toAbsolutePath();
+                LogMessage logMessage = null;
+                try {
+                    logMessage = NucleusManager.getLog(path);
+                } catch (IOException | DirectoryExpectedException e) {
+                    // DirectoryExpectedException should not be thrown here
+                    printError("IO Error");
+                } catch (RepositoryNotInitializedException e) {
+                    printError("Repository not initialized");
+                } catch (HeadFileCorruptException e) {
+                    printError("HEAD file is corrupt");
+                } catch (ObjectsCorruptException e) {
+                    printError("Objects directory is corrupt");
+                }
+                while (logMessage != null) {
+                    System.out.println(logMessage.getMessage());
+                    if (logMessage.getNextLogMessage() != null) {
+                        System.out.println();
+                    }
+                    logMessage = logMessage.getNextLogMessage();
                 }
                 break;
             }
