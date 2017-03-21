@@ -12,10 +12,10 @@ import org.junit.rules.TemporaryFolder;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.DateFormat;
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.anyOf;
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.io.FileMatchers.anExistingDirectory;
 import static org.hamcrest.io.FileMatchers.anExistingFile;
@@ -229,5 +229,44 @@ public class NucleusManagerTest {
         assertThat(repository.getCurrentHead(), is(Constants.REFERENCE_HEAD_PREFIX + branchName));
         assertThat(Files.readAllBytes(repository.getReferencesDirectory().resolve(branchName)),
                 is(Files.readAllBytes(repository.getReferencesDirectory().resolve(Constants.DEFAULT_BRANCH_NAME))));
+    }
+
+    @Test
+    public void testLog() throws Exception {
+        repository = NucleusManager.initRepository(temporaryRootPath);
+        Path file1 = temporaryFolder.newFile().toPath();
+        byte[] content1 = "testContent1".getBytes();
+        Files.write(file1, content1);
+        NucleusManager.addToIndex(file1);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+        Path file2 = temporaryFolder.newFile().toPath();
+        byte[] content2 = "testContent2".getBytes();
+        Files.write(file2, content2);
+        NucleusManager.addToIndex(file2);
+        NucleusManager.commitChanges(temporaryRootPath, "another test commit message");
+
+        LogMessage logMessage = NucleusManager.getLog(temporaryRootPath);
+        assertThat(logMessage, is(notNullValue()));
+        LogMessage nextLogMessage = logMessage.getNextLogMessage();
+        assertThat(nextLogMessage, is(notNullValue()));
+        assertThat(nextLogMessage.getNextLogMessage(), is(nullValue()));
+
+        String author = System.getProperty(Constants.USER_NAME_PROPERTY);
+        String[] splitResults1 = logMessage.getMessage().split(System.lineSeparator());
+        assertThat(splitResults1.length, is(4));
+        assertThat(splitResults1[0].startsWith("commit: "), is(true));
+        assertThat(repository.isValidSha(splitResults1[0].substring("commit :".length())), is(true));
+        assertThat(splitResults1[1], is("author: " + author));
+        assertThat(splitResults1[2].startsWith("date: "), is(true));
+        DateFormat.getDateTimeInstance().parse(splitResults1[2].substring("date: ".length()));
+        assertThat(splitResults1[3], is("another test commit message"));
+        String[] splitResults2 = nextLogMessage.getMessage().split(System.lineSeparator());
+        assertThat(splitResults2.length, is(4));
+        assertThat(splitResults2[0].startsWith("commit: "), is(true));
+        assertThat(repository.isValidSha(splitResults2[0].substring("commit :".length())), is(true));
+        assertThat(splitResults2[1], is("author: " + author));
+        assertThat(splitResults2[2].startsWith("date: "), is(true));
+        DateFormat.getDateTimeInstance().parse(splitResults2[2].substring("date: ".length()));
+        assertThat(splitResults2[3], is("test commit message"));
     }
 }
