@@ -147,7 +147,7 @@ public class NucleusManagerTest {
         assertThat(repository.isValidSha(treeSha), is(true));
         assertThat(author, is(System.getProperty(Constants.USER_NAME_PROPERTY)));
         long time = Long.parseLong(timeString);
-        assertThat(message, is("test commit message"));
+        assertThat(message, is(Constants.MESSAGE_COMMIT_PREFIX + "test commit message"));
 
         assertThat(repository.isValidSha(treeSha), is(true));
         VCSTree tree = readTree(repository, treeSha);
@@ -201,7 +201,7 @@ public class NucleusManagerTest {
         assertThat(author, is(System.getProperty(Constants.USER_NAME_PROPERTY)));
         long time = Long.parseLong(timeString);
         assertThat(parent, is(Constants.PARENT_COMMIT_PREFIX + firstCommitSha));
-        assertThat(message, is("another test commit message"));
+        assertThat(message, is(Constants.MESSAGE_COMMIT_PREFIX + "another test commit message"));
     }
 
     @Test(expected = BranchAlreadyExistsException.class)

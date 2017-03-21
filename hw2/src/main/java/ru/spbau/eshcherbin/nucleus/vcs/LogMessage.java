@@ -23,6 +23,6 @@ public class LogMessage {
         return "commit: " + commit.getSha()
                 + '\n' + "author: " + commit.getAuthor()
                 + '\n' + "date: " + DateFormat.getDateTimeInstance().format(new Date(commit.getTimeInMilliseconds()))
-                + '\n' + "message: " + commit.getMessage();
+                + '\n' + commit.getMessage();
     }
 }
