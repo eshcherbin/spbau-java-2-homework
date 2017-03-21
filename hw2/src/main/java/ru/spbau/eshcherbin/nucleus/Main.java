@@ -15,8 +15,8 @@ public class Main {
         }
         System.out.println("usage:" + "\n    nucleus init [<path>]" + "\n    nucleus add <path>"
                  + "\n    nucleus remove <path>" + "\n    nucleus commit <message>" + "\n    nucleus help"
-                 + "\n    nucleus branch <branchName>");
-        System.out.println("shortcuts:" + "\n    rm = remove" + "\n    ci = commit");
+                 + "\n    nucleus branch <branchName>" + "\n    nucleus checkout <revisionName>");
+        System.out.println("shortcuts:" + "\n    rm = remove" + "\n    ci = commit" + "\n    cout = checkout");
     }
 
     private static void printHelp() {
@@ -144,8 +144,8 @@ public class Main {
                     printError("Repository not initialized");
                 } catch (HeadFileCorruptException e) {
                     printError("HEAD file is corrupt");
-                } catch (ObjectsCorruptException e) {
-                    printError("Objects directory is corrupt");
+                } catch (RepositoryCorruptException e) {
+                    printError("Repository is corrupt");
                 }
                 while (logMessage != null) {
                     System.out.println(logMessage.getMessage());
@@ -153,6 +153,32 @@ public class Main {
                         System.out.println();
                     }
                     logMessage = logMessage.getNextLogMessage();
+                }
+                break;
+            }
+            case "checkout":
+            case "cout": {
+                Path path = Paths.get("").toAbsolutePath();
+                if (args.length < 2) {
+                    printHelp("No revision name provided");
+                    return;
+                }
+                String revisionName = args[1];
+                try {
+                    NucleusManager.checkoutRevision(path, revisionName);
+                } catch (IOException | DirectoryExpectedException e) {
+                    // DirectoryExpectedException should not be thrown here
+                    printError("IO Error");
+                } catch (RepositoryNotInitializedException e) {
+                    printError("Repository not initialized");
+                } catch (HeadFileCorruptException e) {
+                    printError("HEAD file is corrupt");
+                } catch (RepositoryCorruptException e) {
+                    printError("Repository is corrupt");
+                } catch (IndexFileCorruptException e) {
+                    printError("Index file is corrupt");
+                } catch (NoSuchRevisionException e) {
+                    printError("No such revision found");
                 }
                 break;
             }
