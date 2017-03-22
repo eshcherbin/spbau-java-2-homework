@@ -14,9 +14,9 @@ public class Main {
             System.out.println(preMessage);
         }
         System.out.println("usage:" + "\n    nucleus init [<path>]" + "\n    nucleus add <path>"
-                 + "\n    nucleus remove <path>" + "\n    nucleus commit <message>" + "\n    nucleus help"
+                 + "\n    nucleus remove <path>" + "\n    nucleus commit <message>"
                  + "\n    nucleus branch [delete] <branchName>" + "\n    nucleus checkout <revisionName>"
-                 + "\n    nucleus merge <revisionName>");
+                 + "\n    nucleus merge <revisionName>" + "\n    nucleus log" + "\n    nucleus help");
         System.out.println("shortcuts:" + "\n    rm = remove" + "\n    ci = commit" + "\n    cout = checkout");
     }
 
@@ -41,7 +41,7 @@ public class Main {
                     path = path.resolve(args[1]).normalize();
                 }
                 try {
-                    NucleusManager.initRepository(path);
+                    NucleusManager.initializeRepository(path);
                 } catch (IOException e) {
                     printError("IO Error");
                 } catch (DirectoryExpectedException e) {
@@ -100,8 +100,7 @@ public class Main {
                 String message = args[1];
                 try {
                     NucleusManager.commitChanges(path, message);
-                } catch (IOException | DirectoryExpectedException e) {
-                    // DirectoryExpectedException should not be thrown here
+                } catch (IOException e) {
                     printError("IO Error");
                 } catch (RepositoryNotInitializedException e) {
                     printError("Repository not initialized");
@@ -123,8 +122,7 @@ public class Main {
                     branchName = args[2];
                     try {
                         NucleusManager.deleteBranch(path, branchName);
-                    } catch (IOException | DirectoryExpectedException e) {
-                        // DirectoryExpectedException should not be thrown here
+                    } catch (IOException e) {
                         printError("IO Error");
                     } catch (RepositoryNotInitializedException e) {
                         printError("Repository not initialized");
@@ -139,7 +137,7 @@ public class Main {
                     branchName = args[1];
                     try {
                         NucleusManager.createBranch(path, branchName);
-                    } catch (IOException | DirectoryExpectedException e) {
+                    } catch (IOException e) {
                         // DirectoryExpectedException should not be thrown here
                         printError("IO Error");
                     } catch (RepositoryNotInitializedException e) {
@@ -157,8 +155,7 @@ public class Main {
                 LogMessage logMessage = null;
                 try {
                     logMessage = NucleusManager.getLog(path);
-                } catch (IOException | DirectoryExpectedException e) {
-                    // DirectoryExpectedException should not be thrown here
+                } catch (IOException e) {
                     printError("IO Error");
                 } catch (RepositoryNotInitializedException e) {
                     printError("Repository not initialized");
@@ -186,8 +183,7 @@ public class Main {
                 String revisionName = args[1];
                 try {
                     NucleusManager.checkoutRevision(path, revisionName);
-                } catch (IOException | DirectoryExpectedException e) {
-                    // DirectoryExpectedException should not be thrown here
+                } catch (IOException e) {
                     printError("IO Error");
                 } catch (RepositoryNotInitializedException e) {
                     printError("Repository not initialized");
@@ -211,8 +207,7 @@ public class Main {
                 String revisionName = args[1];
                 try {
                     NucleusManager.mergeRevision(path, revisionName);
-                } catch (IOException | DirectoryExpectedException e) {
-                    // DirectoryExpectedException should not be thrown here
+                } catch (IOException e) {
                     printError("IO Error");
                 } catch (RepositoryNotInitializedException e) {
                     printError("Repository not initialized");

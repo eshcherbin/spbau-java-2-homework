@@ -66,7 +66,7 @@ public class NucleusManagerTest {
 
     @Test
     public void initializationTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         assertThat(repository.getObjectsDirectory().toFile(), is(anExistingDirectory()));
         assertThat(repository.getReferencesDirectory().toFile(), is(anExistingDirectory()));
         assertThat(repository.getIndexFile().toFile(), is(anExistingFile()));
@@ -82,7 +82,7 @@ public class NucleusManagerTest {
 
     @Test(expected = IndexFileCorruptException.class)
     public void addToIndexCorruptIndexTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Files.write(repository.getIndexFile(), "someJunk".getBytes());
         Path file = temporaryFolder.newFile().toPath();
         Files.write(file, "testContent".getBytes());
@@ -91,7 +91,7 @@ public class NucleusManagerTest {
 
     @Test
     public void addToIndexTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file = temporaryFolder.newFile().toPath();
         byte[] content = "testContent".getBytes();
         Files.write(file, content);
@@ -111,7 +111,7 @@ public class NucleusManagerTest {
 
     @Test
     public void removeFromIndexTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file = temporaryFolder.newFile().toPath();
         byte[] content = "testContent".getBytes();
         Files.write(file, content);
@@ -124,7 +124,7 @@ public class NucleusManagerTest {
 
     @Test
     public void commitChangesTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file = temporaryFolder.newFile().toPath();
         byte[] content = "testContent".getBytes();
         Files.write(file, content);
@@ -161,7 +161,7 @@ public class NucleusManagerTest {
 
     @Test
     public void severalCommitsTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file1 = temporaryFolder.newFile().toPath();
         byte[] content1 = "testContent1".getBytes();
         Files.write(file1, content1);
@@ -206,7 +206,7 @@ public class NucleusManagerTest {
 
     @Test(expected = BranchAlreadyExistsException.class)
     public void createBranchExistingBranchTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file1 = temporaryFolder.newFile().toPath();
         byte[] content1 = "testContent1".getBytes();
         Files.write(file1, content1);
@@ -217,7 +217,7 @@ public class NucleusManagerTest {
 
     @Test
     public void createBranchTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file1 = temporaryFolder.newFile().toPath();
         byte[] content1 = "testContent1".getBytes();
         Files.write(file1, content1);
@@ -233,7 +233,7 @@ public class NucleusManagerTest {
 
     @Test
     public void testLog() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file1 = temporaryFolder.newFile().toPath();
         byte[] content1 = "testContent1".getBytes();
         Files.write(file1, content1);
@@ -272,7 +272,7 @@ public class NucleusManagerTest {
 
     @Test(expected = NoSuchRevisionOrBranchException.class)
     public void checkoutRevisionNoSuchRevisionTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file1 = temporaryFolder.newFile().toPath();
         byte[] content1 = "testContent1".getBytes();
         Files.write(file1, content1);
@@ -283,7 +283,7 @@ public class NucleusManagerTest {
 
     @Test
     public void checkoutRevisionTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file1 = temporaryFolder.newFile().toPath();
         byte[] content1 = "testContent1".getBytes();
         Files.write(file1, content1);
@@ -310,7 +310,7 @@ public class NucleusManagerTest {
 
     @Test(expected = DeletingHeadBranchException.class)
     public void deleteHeadBranchTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file1 = temporaryFolder.newFile().toPath();
         byte[] content1 = "testContent1".getBytes();
         Files.write(file1, content1);
@@ -321,7 +321,7 @@ public class NucleusManagerTest {
 
     @Test
     public void deleteBranchTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file1 = temporaryFolder.newFile().toPath();
         byte[] content1 = "testContent1".getBytes();
         Files.write(file1, content1);
@@ -335,7 +335,7 @@ public class NucleusManagerTest {
 
     @Test
     public void mergeRevisionTest() throws Exception {
-        repository = NucleusManager.initRepository(temporaryRootPath);
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file1 = temporaryFolder.newFile().toPath();
         byte[] content1 = "testContent1".getBytes();
         Files.write(file1, content1);
@@ -382,6 +382,6 @@ public class NucleusManagerTest {
         assertThat(anotherParent.startsWith(Constants.PARENT_COMMIT_PREFIX), is(true));
         assertThat(repository.isValidSha(anotherParent.substring(Constants.PARENT_COMMIT_PREFIX.length())),
                 is(true));
-        assertThat(message, is(Constants.MESSAGE_COMMIT_PREFIX + Constants.MERGE_COMMIT_PREFIX + "branch"));
+        assertThat(message, is(Constants.MESSAGE_COMMIT_PREFIX + Constants.MERGE_COMMIT_MESSAGE + "branch"));
     }
 }

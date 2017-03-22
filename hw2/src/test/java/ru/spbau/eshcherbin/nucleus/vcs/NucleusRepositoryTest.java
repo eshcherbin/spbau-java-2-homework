@@ -47,11 +47,6 @@ public class NucleusRepositoryTest {
         NucleusRepository.createRepository(temporaryFolder.newFile().toPath());
     }
 
-    @Test(expected = DirectoryExpectedException.class)
-    public void findRepositoryDirectoryExpectedTest() throws Exception {
-        NucleusRepository.findRepository(temporaryFolder.newFile().toPath());
-    }
-
     @Test
     public void findRepositoryTest() throws Exception {
         Path folder = temporaryFolder.newFolder().toPath();
@@ -72,7 +67,7 @@ public class NucleusRepositoryTest {
 
     @Test
     public void getObjectTest() throws Exception {
-        NucleusRepository repository = NucleusManager.initRepository(temporaryRootPath);
+        NucleusRepository repository = NucleusManager.initializeRepository(temporaryRootPath);
         HashFunction sha1 = Hashing.sha1();
         byte[] bytes = new byte[20];
         new Random().nextBytes(bytes);
@@ -85,7 +80,7 @@ public class NucleusRepositoryTest {
 
     @Test
     public void isValidShaTest() throws Exception {
-        NucleusRepository repository = NucleusManager.initRepository(temporaryRootPath);
+        NucleusRepository repository = NucleusManager.initializeRepository(temporaryRootPath);
         HashFunction sha1 = Hashing.sha1();
         byte[] bytes = new byte[20];
         new Random().nextBytes(bytes);
@@ -100,14 +95,14 @@ public class NucleusRepositoryTest {
 
     @Test(expected = HeadFileCorruptException.class)
     public void getCurrentHeadNoHeadFileTest() throws Exception {
-        NucleusRepository repository = NucleusManager.initRepository(temporaryRootPath);
+        NucleusRepository repository = NucleusManager.initializeRepository(temporaryRootPath);
         Files.delete(repository.getHeadFile());
         repository.getCurrentHead();
     }
 
     @Test
     public void getCurrentHeadDefaultTest() throws Exception {
-        NucleusRepository repository = NucleusManager.initRepository(temporaryRootPath);
+        NucleusRepository repository = NucleusManager.initializeRepository(temporaryRootPath);
         assertThat(repository.getCurrentHead(), is(Constants.REFERENCE_HEAD_PREFIX + Constants.DEFAULT_BRANCH_NAME));
     }
 }

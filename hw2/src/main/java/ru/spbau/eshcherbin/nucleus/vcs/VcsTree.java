@@ -6,7 +6,13 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+/**
+ * A node of a VCS tree.
+ */
 public class VcsTree extends VcsObjectWithName {
+    /**
+     * Children of this node.
+     */
     protected @NotNull Set<VcsObjectWithName> children;
 
     public VcsTree(@NotNull String name) {
@@ -17,7 +23,11 @@ public class VcsTree extends VcsObjectWithName {
         this.name = name;
     }
 
-    private @NotNull String getStringContent() {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public @NotNull String toString() {
         return children.stream()
                 .map(child -> child.getType().toString() + "\t" +
                         child.getSha() + '\t' +
@@ -25,12 +35,19 @@ public class VcsTree extends VcsObjectWithName {
                 .collect(Collectors.joining("\n"));
     }
 
+    /**
+     * Adds a child to this node.
+     * @param object the new child
+     */
     public void addChild(@NotNull VcsObjectWithName object) {
         children.add(object);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public byte[] getContent() {
-        return getStringContent().getBytes();
+        return toString().getBytes();
     }
 }
