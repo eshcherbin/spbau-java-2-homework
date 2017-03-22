@@ -205,18 +205,18 @@ public class NucleusManagerTest {
     }
 
     @Test(expected = BranchAlreadyExistsException.class)
-    public void newBranchExistingBranchTest() throws Exception {
+    public void createBranchExistingBranchTest() throws Exception {
         repository = NucleusManager.initRepository(temporaryRootPath);
         Path file1 = temporaryFolder.newFile().toPath();
         byte[] content1 = "testContent1".getBytes();
         Files.write(file1, content1);
         NucleusManager.addToIndex(file1);
         NucleusManager.commitChanges(temporaryRootPath, "test commit message");
-        NucleusManager.newBranch(temporaryRootPath, Constants.DEFAULT_BRANCH_NAME);
+        NucleusManager.createBranch(temporaryRootPath, Constants.DEFAULT_BRANCH_NAME);
     }
 
     @Test
-    public void newBranchTest() throws Exception {
+    public void createBranchTest() throws Exception {
         repository = NucleusManager.initRepository(temporaryRootPath);
         Path file1 = temporaryFolder.newFile().toPath();
         byte[] content1 = "testContent1".getBytes();
@@ -225,7 +225,7 @@ public class NucleusManagerTest {
         NucleusManager.commitChanges(temporaryRootPath, "test commit message");
 
         String branchName = "branch";
-        NucleusManager.newBranch(temporaryRootPath, branchName);
+        NucleusManager.createBranch(temporaryRootPath, branchName);
         assertThat(repository.getCurrentHead(), is(Constants.REFERENCE_HEAD_PREFIX + branchName));
         assertThat(Files.readAllBytes(repository.getReferencesDirectory().resolve(branchName)),
                 is(Files.readAllBytes(repository.getReferencesDirectory().resolve(Constants.DEFAULT_BRANCH_NAME))));
@@ -289,7 +289,7 @@ public class NucleusManagerTest {
         Files.write(file1, content1);
         NucleusManager.addToIndex(file1);
         NucleusManager.commitChanges(temporaryRootPath, "test commit message");
-        NucleusManager.newBranch(temporaryRootPath, "branch");
+        NucleusManager.createBranch(temporaryRootPath, "branch");
 
         Path file2 = temporaryFolder.newFile().toPath();
         byte[] content2 = "testContent2".getBytes();

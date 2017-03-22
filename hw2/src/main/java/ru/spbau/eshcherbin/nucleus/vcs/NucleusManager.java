@@ -286,7 +286,7 @@ public class NucleusManager {
         }
     }
 
-    public static void newBranch(@NotNull Path path, @NotNull String branchName)
+    public static void createBranch(@NotNull Path path, @NotNull String branchName)
             throws IOException, RepositoryNotInitializedException, DirectoryExpectedException,
             HeadFileCorruptException, BranchAlreadyExistsException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);

@@ -119,7 +119,7 @@ public class Main {
                 }
                 String branchName = args[1];
                 try {
-                    NucleusManager.newBranch(path, branchName);
+                    NucleusManager.createBranch(path, branchName);
                 } catch (IOException | DirectoryExpectedException e) {
                     // DirectoryExpectedException should not be thrown here
                     printError("IO Error");
