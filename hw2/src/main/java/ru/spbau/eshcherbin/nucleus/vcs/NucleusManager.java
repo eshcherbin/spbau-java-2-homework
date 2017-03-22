@@ -3,12 +3,13 @@ package ru.spbau.eshcherbin.nucleus.vcs;
 import com.google.common.base.Splitter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class NucleusManager {
     private static String addVCSObject(@NotNull NucleusRepository repository, @NotNull VCSObject object)
@@ -194,6 +195,109 @@ public class NucleusManager {
         }
     }
 
+    private static @NotNull String deployRevision(@NotNull NucleusRepository repository, @NotNull String revisionName,
+                                                  boolean removeCurrent)
+            throws IOException, RepositoryNotInitializedException, DirectoryExpectedException,
+            RepositoryCorruptException, NoSuchRevisionOrBranchException, HeadFileCorruptException,
+            IndexFileCorruptException {
+        String deployedRevisionSha;
+        Path possibleReference = repository.getReferencesDirectory().resolve(revisionName);
+        if (Files.exists(possibleReference)) {
+            deployedRevisionSha = Files.readAllLines(possibleReference).get(0);
+            if (!repository.isValidSha(deployedRevisionSha)) {
+                throw new RepositoryCorruptException();
+            }
+        } else {
+            deployedRevisionSha = revisionName;
+            if (!repository.isValidSha(deployedRevisionSha)) {
+                throw new NoSuchRevisionOrBranchException();
+            }
+        }
+        String currentHead = repository.getCurrentHead();
+        String currentRevisionSha;
+        if (currentHead.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
+            String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+            Path reference = repository.getReferencesDirectory().resolve(currentBranch);
+            if (!Files.exists(reference)) {
+                throw new HeadFileCorruptException();
+            }
+            currentRevisionSha = Files.readAllLines(reference).get(0);
+        } else {
+            currentRevisionSha = currentHead;
+        }
+        if (!repository.isValidSha(currentRevisionSha)) {
+            throw new RepositoryCorruptException();
+        }
+
+        Set<Path> removedFiles;
+        if (removeCurrent) {
+            VCSCommit currentRevision = readCommit(repository, currentRevisionSha);
+            VCSTree currentTree = readTree(repository, currentRevision.getTreeSha());
+            removedFiles = walkVcsTree(currentTree).keySet();
+            for (Path removedFile : removedFiles) {
+                Files.delete(repository.getRootDirectory().resolve(removedFile));
+            }
+        } else {
+            removedFiles = Collections.emptySet();
+        }
+        VCSCommit deployedRevision = readCommit(repository, deployedRevisionSha);
+        VCSTree deployedTree = readTree(repository, deployedRevision.getTreeSha());
+        Map<Path, String> addedFiles = walkVcsTree(deployedTree);
+        for (Map.Entry<Path, String> entry : addedFiles.entrySet()) {
+            Path addedFile = entry.getKey();
+            String sha = entry.getValue();
+            if (!repository.isValidSha(sha)) {
+                throw new RepositoryCorruptException();
+            }
+            Files.copy(repository.getObject(sha), repository.getRootDirectory().resolve(addedFile), REPLACE_EXISTING);
+        }
+        updateIndex(repository, addedFiles, removedFiles);
+        return deployedRevisionSha;
+    }
+
+    private static void commitChanges(@NotNull Path path, @NotNull String message, @Nullable String additionalParentSha)
+            throws IOException, RepositoryNotInitializedException, HeadFileCorruptException,
+            DirectoryExpectedException, IndexFileCorruptException {
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
+        String currentHead = repository.getCurrentHead();
+        if (currentHead.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
+            String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+            String parentSha = null;
+            Path reference = repository.getReferencesDirectory().resolve(currentBranch);
+            if (Files.exists(reference)) {
+                parentSha = Files.readAllLines(reference).get(0);
+            }
+            VCSTree tree = collectTreeFromIndex(repository);
+            addVCSObject(repository, tree);
+            VCSCommit commit = new VCSCommit(tree.getSha(), message, System.getProperty(Constants.USER_NAME_PROPERTY),
+                    System.currentTimeMillis());
+            if (parentSha != null) {
+                commit.getParents().add(parentSha);
+            }
+            if (additionalParentSha != null) {
+                commit.getParents().add(additionalParentSha);
+            }
+            addVCSObject(repository, commit);
+            Files.write(repository.getHeadFile(), currentHead.getBytes());
+            if (!Files.exists(reference)) {
+                Files.createFile(reference);
+            }
+            Files.write(reference, commit.getSha().getBytes());
+        } else {
+            VCSTree tree = collectTreeFromIndex(repository);
+            addVCSObject(repository, tree);
+            VCSCommit commit = new VCSCommit(tree.getSha(), message, System.getProperty(Constants.USER_NAME_PROPERTY),
+                    System.currentTimeMillis());
+            commit.getParents().add(currentHead);
+            if (additionalParentSha != null) {
+                commit.getParents().add(additionalParentSha);
+            }
+            String commitSha = addVCSObject(repository, commit);
+            Files.write(repository.getHeadFile(), commitSha.getBytes());
+        }
+    }
+
     public static @NotNull NucleusRepository initRepository(@NotNull Path path)
             throws IOException, DirectoryExpectedException, RepositoryAlreadyInitializedException {
         NucleusRepository repository = NucleusRepository.createRepository(path);
@@ -250,40 +354,9 @@ public class NucleusManager {
     }
 
     public static void commitChanges(@NotNull Path path, @NotNull String message)
-            throws IOException, RepositoryNotInitializedException, HeadFileCorruptException,
-            DirectoryExpectedException, IndexFileCorruptException {
-        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
-        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
-        String currentHead = repository.getCurrentHead();
-        if (currentHead.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
-            String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
-            String parentSha = null;
-            Path reference = repository.getReferencesDirectory().resolve(currentBranch);
-            if (Files.exists(reference)) {
-                parentSha = Files.readAllLines(reference).get(0);
-            }
-            VCSTree tree = collectTreeFromIndex(repository);
-            addVCSObject(repository, tree);
-            VCSCommit commit = new VCSCommit(tree.getSha(), message, System.getProperty(Constants.USER_NAME_PROPERTY),
-                    System.currentTimeMillis());
-            if (parentSha != null) {
-                commit.getParents().add(parentSha);
-            }
-            addVCSObject(repository, commit);
-            Files.write(repository.getHeadFile(), currentHead.getBytes());
-            if (!Files.exists(reference)) {
-                Files.createFile(reference);
-            }
-            Files.write(reference, commit.getSha().getBytes());
-        } else {
-            VCSTree tree = collectTreeFromIndex(repository);
-            addVCSObject(repository, tree);
-            VCSCommit commit = new VCSCommit(tree.getSha(), message, System.getProperty(Constants.USER_NAME_PROPERTY),
-                    System.currentTimeMillis());
-            commit.getParents().add(currentHead);
-            String commitSha = addVCSObject(repository, commit);
-            Files.write(repository.getHeadFile(), commitSha.getBytes());
-        }
+            throws DirectoryExpectedException, RepositoryNotInitializedException, IndexFileCorruptException,
+            HeadFileCorruptException, IOException {
+        commitChanges(path, message, null);
     }
 
     public static void createBranch(@NotNull Path path, @NotNull String branchName)
@@ -319,6 +392,19 @@ public class NucleusManager {
             throw new DeletingHeadBranchException();
         }
         Files.delete(reference);
+    }
+
+    public static void checkoutRevision(@NotNull Path path, @NotNull String revisionName)
+            throws IOException, RepositoryNotInitializedException, DirectoryExpectedException,
+            HeadFileCorruptException, RepositoryCorruptException, NoSuchRevisionOrBranchException,
+            IndexFileCorruptException {
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
+        deployRevision(repository, revisionName, true);
+        Path possibleReference = repository.getReferencesDirectory().resolve(revisionName);
+        // update HEAD
+        Files.write(repository.getHeadFile(),
+                ((Files.exists(possibleReference) ? Constants.REFERENCE_HEAD_PREFIX : "") + revisionName).getBytes());
     }
 
     public static @Nullable LogMessage getLog(@NotNull Path path, @NotNull String revisionName)
@@ -371,66 +457,12 @@ public class NucleusManager {
         return getLog(path, currentHead);
     }
 
-    public static void checkoutRevision(@NotNull Path path, @NotNull String name)
-            throws IOException, RepositoryNotInitializedException, DirectoryExpectedException,
-            HeadFileCorruptException, RepositoryCorruptException, NoSuchRevisionOrBranchException,
-            IndexFileCorruptException {
+    public static void mergeRevision(@NotNull Path path, @NotNull String revisionName)
+            throws IOException, RepositoryNotInitializedException, DirectoryExpectedException, HeadFileCorruptException,
+            IndexFileCorruptException, NoSuchRevisionOrBranchException, RepositoryCorruptException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
-        String newRevisionSha;
-        Path possibleReference = repository.getReferencesDirectory().resolve(name);
-        if (Files.exists(possibleReference)) {
-            newRevisionSha = Files.readAllLines(possibleReference).get(0);
-            if (!repository.isValidSha(newRevisionSha)) {
-                throw new RepositoryCorruptException();
-            }
-        } else {
-            newRevisionSha = name;
-            if (!repository.isValidSha(newRevisionSha)) {
-                throw new NoSuchRevisionOrBranchException();
-            }
-        }
-        String currentHead = repository.getCurrentHead();
-        String currentRevisionSha;
-        if (currentHead.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
-            String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
-            Path reference = repository.getReferencesDirectory().resolve(currentBranch);
-            if (!Files.exists(reference)) {
-                throw new HeadFileCorruptException();
-            }
-            currentRevisionSha = Files.readAllLines(reference).get(0);
-        } else {
-            currentRevisionSha = currentHead;
-        }
-        if (!repository.isValidSha(currentRevisionSha)) {
-            throw new RepositoryCorruptException();
-        }
-
-        VCSCommit currentRevision = readCommit(repository, currentRevisionSha);
-        VCSCommit newRevision = readCommit(repository, newRevisionSha);
-        VCSTree currentTree = readTree(repository, currentRevision.getTreeSha());
-        VCSTree newTree = readTree(repository, newRevision.getTreeSha());
-        Set<Path> removedFiles = walkVcsTree(currentTree).keySet();
-        Map<Path, String> addedFiles = walkVcsTree(newTree);
-        for (Path removedFile : removedFiles) {
-            Files.delete(repository.getRootDirectory().resolve(removedFile));
-        }
-        for (Map.Entry<Path, String> entry : addedFiles.entrySet()) {
-            Path addedFile = entry.getKey();
-            String sha = entry.getValue();
-            if (!repository.isValidSha(sha)) {
-                throw new RepositoryCorruptException();
-            }
-            Files.copy(repository.getObject(sha), repository.getRootDirectory().resolve(addedFile));
-        }
-        updateIndex(repository, addedFiles, removedFiles);
-        // update HEAD
-        Files.write(repository.getHeadFile(),
-                ((Files.exists(possibleReference) ? Constants.REFERENCE_HEAD_PREFIX : "") + name).getBytes());
-    }
-
-    public static void mergeCommit(@NotNull Path path, @NotNull String name) {
-        //TODO: implement merge
-        throw new NotImplementedException();
+        String mergedRevisionSha = deployRevision(repository, revisionName, false);
+        commitChanges(path, Constants.MERGE_COMMIT_MESSAGE + revisionName, mergedRevisionSha);
     }
 }
