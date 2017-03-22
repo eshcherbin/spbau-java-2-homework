@@ -332,4 +332,56 @@ public class NucleusManagerTest {
         assertThat(repository.getReferencesDirectory().resolve(Constants.DEFAULT_BRANCH_NAME).toFile(),
                 is(not(anExistingFile())));
     }
+
+    @Test
+    public void mergeRevisionTest() throws Exception {
+        repository = NucleusManager.initRepository(temporaryRootPath);
+        Path file1 = temporaryFolder.newFile().toPath();
+        byte[] content1 = "testContent1".getBytes();
+        Files.write(file1, content1);
+        NucleusManager.addToIndex(file1);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+        NucleusManager.createBranch(temporaryRootPath, "branch");
+
+        Path file2 = temporaryFolder.newFile().toPath();
+        byte[] content2 = "testContent2".getBytes();
+        Files.write(file2, content2);
+        NucleusManager.addToIndex(file2);
+        NucleusManager.commitChanges(temporaryRootPath, "another test commit message");
+
+        NucleusManager.checkoutRevision(temporaryRootPath, Constants.DEFAULT_BRANCH_NAME);
+        Path file3 = temporaryFolder.newFile().toPath();
+        byte[] content3 = "testContent3".getBytes();
+        Files.write(file3, content3);
+        NucleusManager.addToIndex(file3);
+        NucleusManager.commitChanges(temporaryRootPath, "and another test commit message");
+
+        NucleusManager.mergeRevision(temporaryRootPath, "branch");
+        assertThat(file2.toFile(), is(anExistingFile()));
+        String currentHead = repository.getCurrentHead();
+        assertThat(currentHead, is(Constants.REFERENCE_HEAD_PREFIX + Constants.DEFAULT_BRANCH_NAME));
+        String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+        List<String> currentHeadLines = Files.readAllLines(repository.getReferencesDirectory().resolve(currentBranch));
+        assertThat(currentHeadLines.size(), is(1));
+        String sha = currentHeadLines.get(0);
+
+        assertThat(repository.isValidSha(sha), is(true));
+        List<String> commitLines = Files.readAllLines(repository.getObject(sha));
+        assertThat(commitLines.size(), is(6));
+        String treeSha = commitLines.get(0);
+        String author = commitLines.get(1);
+        String timeString = commitLines.get(2);
+        String parent = commitLines.get(3);
+        String anotherParent = commitLines.get(4);
+        String message = commitLines.get(5);
+        assertThat(repository.isValidSha(treeSha), is(true));
+        assertThat(author, is(System.getProperty(Constants.USER_NAME_PROPERTY)));
+        long time = Long.parseLong(timeString);
+        assertThat(parent.startsWith(Constants.PARENT_COMMIT_PREFIX), is(true));
+        assertThat(repository.isValidSha(parent.substring(Constants.PARENT_COMMIT_PREFIX.length())), is(true));
+        assertThat(anotherParent.startsWith(Constants.PARENT_COMMIT_PREFIX), is(true));
+        assertThat(repository.isValidSha(anotherParent.substring(Constants.PARENT_COMMIT_PREFIX.length())),
+                is(true));
+        assertThat(message, is(Constants.MESSAGE_COMMIT_PREFIX + Constants.MERGE_COMMIT_PREFIX + "branch"));
+    }
 }

@@ -463,6 +463,6 @@ public class NucleusManager {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
         String mergedRevisionSha = deployRevision(repository, revisionName, false);
-        commitChanges(path, Constants.MERGE_COMMIT_MESSAGE + revisionName, mergedRevisionSha);
+        commitChanges(path, Constants.MERGE_COMMIT_PREFIX + revisionName, mergedRevisionSha);
     }
 }

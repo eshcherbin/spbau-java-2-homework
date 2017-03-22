@@ -12,5 +12,5 @@ public class Constants {
     public static final String REFERENCE_HEAD_PREFIX = "ref: ";
     public static final String PARENT_COMMIT_PREFIX = "parent: ";
     public static final String MESSAGE_COMMIT_PREFIX = "message: ";
-    public static final String MERGE_COMMIT_MESSAGE = "merged: ";
+    public static final String MERGE_COMMIT_PREFIX = "merged: ";
 }
