@@ -92,7 +92,7 @@ public class Main {
             case "commit":
             case "ci": {
                 Path path = Paths.get("").toAbsolutePath();
-                if (args.length < 2) {
+                if (args.length < 2 || args[1].isEmpty()) {
                     printHelp("No commit message provided");
                     return;
                 }

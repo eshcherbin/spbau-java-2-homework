@@ -269,4 +269,42 @@ public class NucleusManagerTest {
         DateFormat.getDateTimeInstance().parse(splitResults2[2].substring("date: ".length()));
         assertThat(splitResults2[3], is("test commit message"));
     }
+
+    @Test(expected = NoSuchRevisionException.class)
+    public void checkoutRevisionNoSuchRevisionTest() throws Exception {
+        repository = NucleusManager.initRepository(temporaryRootPath);
+        Path file1 = temporaryFolder.newFile().toPath();
+        byte[] content1 = "testContent1".getBytes();
+        Files.write(file1, content1);
+        NucleusManager.addToIndex(file1);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+        NucleusManager.checkoutRevision(temporaryRootPath, "junk");
+    }
+
+    @Test
+    public void checkoutRevisionTest() throws Exception {
+        repository = NucleusManager.initRepository(temporaryRootPath);
+        Path file1 = temporaryFolder.newFile().toPath();
+        byte[] content1 = "testContent1".getBytes();
+        Files.write(file1, content1);
+        NucleusManager.addToIndex(file1);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+        NucleusManager.newBranch(temporaryRootPath, "branch");
+
+        Path file2 = temporaryFolder.newFile().toPath();
+        byte[] content2 = "testContent2".getBytes();
+        Files.write(file2, content2);
+        NucleusManager.addToIndex(file2);
+        NucleusManager.commitChanges(temporaryRootPath, "another test commit message");
+
+        NucleusManager.checkoutRevision(temporaryRootPath, Constants.DEFAULT_BRANCH_NAME);
+        assertThat(file2.toFile(), is(not(anExistingFile())));
+        byte[] content3 = "testContent3".getBytes();
+        Files.write(file2, content3);
+        NucleusManager.addToIndex(file2);
+        NucleusManager.commitChanges(temporaryRootPath, "another test commit message");
+        NucleusManager.checkoutRevision(temporaryRootPath, "branch");
+        assertThat(file2.toFile(), is(anExistingFile()));
+        assertThat(Files.readAllBytes(file2), is(content2));
+    }
 }
