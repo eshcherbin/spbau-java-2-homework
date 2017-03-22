@@ -1,6 +1,6 @@
 package ru.spbau.eshcherbin.nucleus.vcs;
 
-public enum VCSObjectType {
+public enum VcsObjectType {
     TREE,
     BLOB,
     COMMIT,

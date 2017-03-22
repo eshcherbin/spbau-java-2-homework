@@ -6,17 +6,17 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class VCSCommit extends VCSObject {
+public class VcsCommit extends VcsObject {
     private @NotNull String treeSha;
     private @NotNull String message;
     private @NotNull String author;
     private long timeInMilliseconds;
     private @NotNull Set<String> parents;
 
-    public VCSCommit(@NotNull String treeSha, @NotNull String message,
+    public VcsCommit(@NotNull String treeSha, @NotNull String message,
                      @NotNull String author, long timeInMilliseconds) {
         this.treeSha = treeSha;
-        type = VCSObjectType.COMMIT;
+        type = VcsObjectType.COMMIT;
         this.message = message;
         this.author = author;
         this.timeInMilliseconds = timeInMilliseconds;

@@ -2,12 +2,12 @@ package ru.spbau.eshcherbin.nucleus.vcs;
 
 import org.jetbrains.annotations.NotNull;
 
-public class VCSBlob extends VCSObjectWithName {
+public class VcsBlob extends VcsObjectWithName {
     private byte[] content;
 
-    public VCSBlob(byte[] content, @NotNull String name) {
+    public VcsBlob(byte[] content, @NotNull String name) {
         super(name);
-        type = VCSObjectType.BLOB;
+        type = VcsObjectType.BLOB;
         this.content = content;
     }
 

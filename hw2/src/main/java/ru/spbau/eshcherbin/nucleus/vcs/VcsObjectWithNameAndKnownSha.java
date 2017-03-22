@@ -2,10 +2,10 @@ package ru.spbau.eshcherbin.nucleus.vcs;
 
 import org.jetbrains.annotations.NotNull;
 
-public class VCSObjectWithNameAndKnownSha extends VCSObjectWithName {
+public class VcsObjectWithNameAndKnownSha extends VcsObjectWithName {
     private @NotNull String sha;
 
-    public VCSObjectWithNameAndKnownSha(@NotNull String name, @NotNull String sha, @NotNull VCSObjectType type) {
+    public VcsObjectWithNameAndKnownSha(@NotNull String name, @NotNull String sha, @NotNull VcsObjectType type) {
         super(name);
         this.sha = sha;
         this.type = type;

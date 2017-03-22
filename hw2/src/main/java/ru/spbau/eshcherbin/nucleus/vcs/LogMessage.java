@@ -7,10 +7,10 @@ import java.text.DateFormat;
 import java.util.Date;
 
 public class LogMessage {
-    private @NotNull VCSCommit commit;
+    private @NotNull VcsCommit commit;
     private @Nullable LogMessage nextLogMessage;
 
-    public LogMessage(@NotNull VCSCommit commit, @Nullable LogMessage nextLogMessage) {
+    public LogMessage(@NotNull VcsCommit commit, @Nullable LogMessage nextLogMessage) {
         this.commit = commit;
         this.nextLogMessage = nextLogMessage;
     }

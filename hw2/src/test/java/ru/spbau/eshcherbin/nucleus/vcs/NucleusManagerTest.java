@@ -30,23 +30,23 @@ public class NucleusManagerTest {
     private Path temporaryRootPath;
     private NucleusRepository repository;
 
-    private @NotNull VCSTree readTree(@NotNull NucleusRepository repository,
+    private @NotNull VcsTree readTree(@NotNull NucleusRepository repository,
                                       @NotNull String treeSha,
                                       @NotNull String treeName)
             throws IOException {
         List<String> treeLines = Files.readAllLines(repository.getObject(treeSha));
         Splitter onTabSplitter = Splitter.on('\t').omitEmptyStrings().trimResults();
-        VCSTree tree = new VCSTree(treeName);
+        VcsTree tree = new VcsTree(treeName);
         for (String line : treeLines) {
             List<String> splitResults = onTabSplitter.splitToList(line);
             assertThat(splitResults.size(), is(3));
-            VCSObjectType type = VCSObjectType.valueOf(splitResults.get(0));
+            VcsObjectType type = VcsObjectType.valueOf(splitResults.get(0));
             String sha = splitResults.get(1);
             String name = splitResults.get(2);
             assertThat(repository.isValidSha(sha), is(true));
-            assertThat(type, anyOf(is(VCSObjectType.BLOB), is(VCSObjectType.TREE)));
-            if (type == VCSObjectType.BLOB) {
-                tree.addChild(new VCSObjectWithNameAndKnownSha(name, sha, type));
+            assertThat(type, anyOf(is(VcsObjectType.BLOB), is(VcsObjectType.TREE)));
+            if (type == VcsObjectType.BLOB) {
+                tree.addChild(new VcsObjectWithNameAndKnownSha(name, sha, type));
             } else {
                 tree.addChild(readTree(repository, sha, treeName));
             }
@@ -54,7 +54,7 @@ public class NucleusManagerTest {
         return tree;
     }
 
-    private @NotNull VCSTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha)
+    private @NotNull VcsTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha)
             throws IOException {
         return readTree(repository, treeSha, "");
     }
@@ -150,11 +150,11 @@ public class NucleusManagerTest {
         assertThat(message, is(Constants.MESSAGE_COMMIT_PREFIX + "test commit message"));
 
         assertThat(repository.isValidSha(treeSha), is(true));
-        VCSTree tree = readTree(repository, treeSha);
+        VcsTree tree = readTree(repository, treeSha);
 
         assertThat(tree.children.size(), is(1));
-        VCSObjectWithName vcsObjectWithName = tree.children.stream().findAny().orElseThrow(Exception::new);
-        assertThat(vcsObjectWithName.getType(), is(VCSObjectType.BLOB));
+        VcsObjectWithName vcsObjectWithName = tree.children.stream().findAny().orElseThrow(Exception::new);
+        assertThat(vcsObjectWithName.getType(), is(VcsObjectType.BLOB));
         assertThat(vcsObjectWithName.getName(), is(file.getFileName().toString()));
         assertThat(repository.isValidSha(vcsObjectWithName.getSha()), is(true));
     }

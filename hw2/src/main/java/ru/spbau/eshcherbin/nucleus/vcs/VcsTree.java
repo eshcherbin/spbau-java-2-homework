@@ -6,12 +6,12 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-public class VCSTree extends VCSObjectWithName {
-    protected @NotNull Set<VCSObjectWithName> children;
+public class VcsTree extends VcsObjectWithName {
+    protected @NotNull Set<VcsObjectWithName> children;
 
-    public VCSTree(@NotNull String name) {
+    public VcsTree(@NotNull String name) {
         super(name);
-        type = VCSObjectType.TREE;
+        type = VcsObjectType.TREE;
         // TreeSet to ensure sorted order
         children = new TreeSet<>();
         this.name = name;
@@ -25,7 +25,7 @@ public class VCSTree extends VCSObjectWithName {
                 .collect(Collectors.joining("\n"));
     }
 
-    public void addChild(@NotNull VCSObjectWithName object) {
+    public void addChild(@NotNull VcsObjectWithName object) {
         children.add(object);
     }
 

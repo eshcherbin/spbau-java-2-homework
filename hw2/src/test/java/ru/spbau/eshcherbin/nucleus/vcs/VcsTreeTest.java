@@ -5,12 +5,12 @@ import org.junit.Test;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
-public class VCSTreeTest {
+public class VcsTreeTest {
     @Test
     public void getContentTest() throws Exception {
-        VCSTree tree = new VCSTree("");
-        VCSBlob blob1 = new VCSBlob("bTestContent".getBytes(), "bTest");
-        VCSBlob blob2 = new VCSBlob("aTestContent".getBytes(), "aTest");
+        VcsTree tree = new VcsTree("");
+        VcsBlob blob1 = new VcsBlob("bTestContent".getBytes(), "bTest");
+        VcsBlob blob2 = new VcsBlob("aTestContent".getBytes(), "aTest");
         tree.addChild(blob1);
         tree.addChild(blob2);
         String expectedTreeContent = blob2.getType().toString() + '\t' + blob2.getSha() + '\t' + blob2.getName() +

@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class NucleusManager {
-    private static String addVCSObject(@NotNull NucleusRepository repository, @NotNull VCSObject object)
+    private static String addVCSObject(@NotNull NucleusRepository repository, @NotNull VcsObject object)
             throws IOException {
         Path objectDirectoryPath = repository.getObjectsDirectory()
                 .resolve(object.getSha().substring(0, Constants.OBJECT_DIRECTORY_NAME_LENGTH));
@@ -25,7 +25,7 @@ public class NucleusManager {
     }
 
     private static String addFile(@NotNull NucleusRepository repository, @NotNull Path filePath) throws IOException {
-        return addVCSObject(repository, new VCSBlob(Files.readAllBytes(filePath), filePath.getFileName().toString()));
+        return addVCSObject(repository, new VcsBlob(Files.readAllBytes(filePath), filePath.getFileName().toString()));
     }
 
     private static @NotNull Map<Path, String> readIndexFile(@NotNull NucleusRepository repository)
@@ -61,11 +61,11 @@ public class NucleusManager {
                 .collect(Collectors.toList()));
     }
 
-    private static @NotNull VCSTree collectTreeFromIndex(@NotNull NucleusRepository repository)
+    private static @NotNull VcsTree collectTreeFromIndex(@NotNull NucleusRepository repository)
             throws IndexFileCorruptException, IOException {
         Map<Path, String> index = readIndexFile(repository);
-        Map<Path, VCSTree> pathToTree = new HashMap<>();
-        pathToTree.put(Paths.get(""), new VCSTree(""));
+        Map<Path, VcsTree> pathToTree = new HashMap<>();
+        pathToTree.put(Paths.get(""), new VcsTree(""));
         for (Path path : index.keySet()) {
             for (Path prefixPath : path) {
                 Path parent = prefixPath.getParent();
@@ -75,21 +75,21 @@ public class NucleusManager {
                 Path name = prefixPath.getFileName();
                 if (prefixPath.equals(path)) {
                     pathToTree.get(parent).addChild(
-                            new VCSObjectWithNameAndKnownSha(
+                            new VcsObjectWithNameAndKnownSha(
                                     name.toString(),
                                     index.get(path),
-                                    VCSObjectType.BLOB
+                                    VcsObjectType.BLOB
                             )
                     );
                 } else if (!pathToTree.containsKey(prefixPath)) {
-                    pathToTree.put(prefixPath, new VCSTree(name.toString()));
+                    pathToTree.put(prefixPath, new VcsTree(name.toString()));
                 }
             }
         }
         return pathToTree.get(Paths.get(""));
     }
 
-    private static @NotNull VCSCommit readCommit(@NotNull NucleusRepository repository, @NotNull String commitSha)
+    private static @NotNull VcsCommit readCommit(@NotNull NucleusRepository repository, @NotNull String commitSha)
             throws RepositoryCorruptException, IOException {
         if (!repository.isValidSha(commitSha)) {
             throw new RepositoryCorruptException();
@@ -125,7 +125,7 @@ public class NucleusManager {
             messageBuilder.append(commitLines.get(i));
         }
         String message = messageBuilder.toString();
-        VCSCommit commit = new VCSCommit(treeSha, message, author, timeInMilliseconds);
+        VcsCommit commit = new VcsCommit(treeSha, message, author, timeInMilliseconds);
         Set<String> parentShaSet = commit.getParents();
         for (int i = 3; i < messageStartLineIndex; ++i) {
             String line = commitLines.get(i);
@@ -138,40 +138,40 @@ public class NucleusManager {
         return commit;
     }
 
-    private static @NotNull VCSTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha)
+    private static @NotNull VcsTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha)
             throws RepositoryCorruptException, IOException {
         return readTree(repository, treeSha, "");
     }
 
-    private static @NotNull VCSTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha,
+    private static @NotNull VcsTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha,
                                              @NotNull String treeName)
             throws RepositoryCorruptException, IOException {
         if (!repository.isValidSha(treeSha)) {
             throw new RepositoryCorruptException();
         }
-        VCSTree tree = new VCSTree(treeName);
+        VcsTree tree = new VcsTree(treeName);
         Splitter onTabSplitter = Splitter.on('\t').omitEmptyStrings().trimResults();
         for (String line : Files.readAllLines(repository.getObject(treeSha))) {
             List<String> splitResults = onTabSplitter.splitToList(line);
             if (splitResults.size() != 3) {
                 throw new RepositoryCorruptException();
             }
-            VCSObjectType type;
+            VcsObjectType type;
             try {
-                type = VCSObjectType.valueOf(splitResults.get(0));
+                type = VcsObjectType.valueOf(splitResults.get(0));
             } catch (IllegalArgumentException e) {
                 throw new RepositoryCorruptException();
             }
-            if (!(type == VCSObjectType.BLOB || type == VCSObjectType.TREE)) {
+            if (!(type == VcsObjectType.BLOB || type == VcsObjectType.TREE)) {
                 throw new RepositoryCorruptException();
             }
             String sha = splitResults.get(1);
             String name = splitResults.get(2);
-            if (type == VCSObjectType.BLOB) {
+            if (type == VcsObjectType.BLOB) {
                 if (!repository.isValidSha(sha)) {
                     throw new RepositoryCorruptException();
                 }
-                tree.addChild(new VCSObjectWithNameAndKnownSha(name, sha, type));
+                tree.addChild(new VcsObjectWithNameAndKnownSha(name, sha, type));
             } else {
                 tree.addChild(readTree(repository, sha, treeName));
             }
@@ -179,18 +179,18 @@ public class NucleusManager {
         return tree;
     }
 
-    private static @NotNull Map<Path, String> walkVcsTree(@NotNull VCSTree tree) {
+    private static @NotNull Map<Path, String> walkVcsTree(@NotNull VcsTree tree) {
         Map<Path, String> files = new HashMap<>();
         walkVcsTree(tree, Paths.get(""), files);
         return files;
     }
 
-    private static void walkVcsTree(@NotNull VCSTree tree, @NotNull Path path, @NotNull Map<Path, String> filesMap) {
-        for (VCSObjectWithName object : tree.children) {
-            if (object.getType() == VCSObjectType.BLOB) {
+    private static void walkVcsTree(@NotNull VcsTree tree, @NotNull Path path, @NotNull Map<Path, String> filesMap) {
+        for (VcsObjectWithName object : tree.children) {
+            if (object.getType() == VcsObjectType.BLOB) {
                 filesMap.put(path.resolve(object.getName()), object.getSha());
             } else {
-                walkVcsTree((VCSTree) object, path.resolve(object.getName()), filesMap);
+                walkVcsTree((VcsTree) object, path.resolve(object.getName()), filesMap);
             }
         }
     }
@@ -231,8 +231,8 @@ public class NucleusManager {
 
         Set<Path> removedFiles;
         if (removeCurrent) {
-            VCSCommit currentRevision = readCommit(repository, currentRevisionSha);
-            VCSTree currentTree = readTree(repository, currentRevision.getTreeSha());
+            VcsCommit currentRevision = readCommit(repository, currentRevisionSha);
+            VcsTree currentTree = readTree(repository, currentRevision.getTreeSha());
             removedFiles = walkVcsTree(currentTree).keySet();
             for (Path removedFile : removedFiles) {
                 Files.delete(repository.getRootDirectory().resolve(removedFile));
@@ -240,8 +240,8 @@ public class NucleusManager {
         } else {
             removedFiles = Collections.emptySet();
         }
-        VCSCommit deployedRevision = readCommit(repository, deployedRevisionSha);
-        VCSTree deployedTree = readTree(repository, deployedRevision.getTreeSha());
+        VcsCommit deployedRevision = readCommit(repository, deployedRevisionSha);
+        VcsTree deployedTree = readTree(repository, deployedRevision.getTreeSha());
         Map<Path, String> addedFiles = walkVcsTree(deployedTree);
         for (Map.Entry<Path, String> entry : addedFiles.entrySet()) {
             Path addedFile = entry.getKey();
@@ -268,9 +268,9 @@ public class NucleusManager {
             if (Files.exists(reference)) {
                 parentSha = Files.readAllLines(reference).get(0);
             }
-            VCSTree tree = collectTreeFromIndex(repository);
+            VcsTree tree = collectTreeFromIndex(repository);
             addVCSObject(repository, tree);
-            VCSCommit commit = new VCSCommit(tree.getSha(), message, System.getProperty(Constants.USER_NAME_PROPERTY),
+            VcsCommit commit = new VcsCommit(tree.getSha(), message, System.getProperty(Constants.USER_NAME_PROPERTY),
                     System.currentTimeMillis());
             if (parentSha != null) {
                 commit.getParents().add(parentSha);
@@ -285,9 +285,9 @@ public class NucleusManager {
             }
             Files.write(reference, commit.getSha().getBytes());
         } else {
-            VCSTree tree = collectTreeFromIndex(repository);
+            VcsTree tree = collectTreeFromIndex(repository);
             addVCSObject(repository, tree);
-            VCSCommit commit = new VCSCommit(tree.getSha(), message, System.getProperty(Constants.USER_NAME_PROPERTY),
+            VcsCommit commit = new VcsCommit(tree.getSha(), message, System.getProperty(Constants.USER_NAME_PROPERTY),
                     System.currentTimeMillis());
             commit.getParents().add(currentHead);
             if (additionalParentSha != null) {
@@ -423,15 +423,15 @@ public class NucleusManager {
         } else {
             startCommitSha = revisionName;
         }
-        VCSCommit headCommit = readCommit(repository, startCommitSha);
+        VcsCommit headCommit = readCommit(repository, startCommitSha);
         // breadth-first commit graph traversal
         Set<String> presentShaSet = new HashSet<>();
         presentShaSet.add(startCommitSha);
-        Queue<VCSCommit> queue = new LinkedList<>();
+        Queue<VcsCommit> queue = new LinkedList<>();
         queue.add(headCommit);
-        List<VCSCommit> commits = new ArrayList<>();
+        List<VcsCommit> commits = new ArrayList<>();
         while (!queue.isEmpty()) {
-            VCSCommit commit = queue.remove();
+            VcsCommit commit = queue.remove();
             commits.add(commit);
             for (String parentSha : commit.getParents()) {
                 if (!presentShaSet.contains(parentSha)) {
@@ -440,9 +440,9 @@ public class NucleusManager {
                 }
             }
         }
-        commits.sort(Comparator.comparingLong(VCSCommit::getTimeInMilliseconds));
+        commits.sort(Comparator.comparingLong(VcsCommit::getTimeInMilliseconds));
         LogMessage currentLogMessage = null;
-        for (VCSCommit commit : commits) {
+        for (VcsCommit commit : commits) {
             currentLogMessage = new LogMessage(commit, currentLogMessage);
         }
         return currentLogMessage;
