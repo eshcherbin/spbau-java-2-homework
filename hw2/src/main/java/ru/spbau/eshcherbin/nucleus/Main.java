@@ -15,7 +15,7 @@ public class Main {
         }
         System.out.println("usage:" + "\n    nucleus init [<path>]" + "\n    nucleus add <path>"
                  + "\n    nucleus remove <path>" + "\n    nucleus commit <message>" + "\n    nucleus help"
-                 + "\n    nucleus branch <branchName>" + "\n    nucleus checkout <revisionName>");
+                 + "\n    nucleus branch [delete] <branchName>" + "\n    nucleus checkout <revisionName>");
         System.out.println("shortcuts:" + "\n    rm = remove" + "\n    ci = commit" + "\n    cout = checkout");
     }
 
@@ -113,22 +113,41 @@ public class Main {
             }
             case "branch": {
                 Path path = Paths.get("").toAbsolutePath();
-                if (args.length < 2) {
+                if (args.length < 2 || (args[1].equals("delete") && args.length < 3)) {
                     printHelp("No branch name provided");
                     return;
                 }
-                String branchName = args[1];
-                try {
-                    NucleusManager.createBranch(path, branchName);
-                } catch (IOException | DirectoryExpectedException e) {
-                    // DirectoryExpectedException should not be thrown here
-                    printError("IO Error");
-                } catch (RepositoryNotInitializedException e) {
-                    printError("Repository not initialized");
-                } catch (HeadFileCorruptException e) {
-                    printError("HEAD file is corrupt");
-                } catch (BranchAlreadyExistsException e) {
-                    printError("Branch " + branchName + " already exists");
+                String branchName;
+                if (args[1].equals("delete")) {
+                    branchName = args[2];
+                    try {
+                        NucleusManager.deleteBranch(path, branchName);
+                    } catch (IOException | DirectoryExpectedException e) {
+                        // DirectoryExpectedException should not be thrown here
+                        printError("IO Error");
+                    } catch (RepositoryNotInitializedException e) {
+                        printError("Repository not initialized");
+                    } catch (HeadFileCorruptException e) {
+                        printError("HEAD file is corrupt");
+                    } catch (NoSuchRevisionOrBranchException e) {
+                        printError("Branch " + branchName + " does not exists");
+                    } catch (DeletingHeadBranchException e) {
+                        printError("Unable to delete current branch");
+                    }
+                } else {
+                    branchName = args[1];
+                    try {
+                        NucleusManager.createBranch(path, branchName);
+                    } catch (IOException | DirectoryExpectedException e) {
+                        // DirectoryExpectedException should not be thrown here
+                        printError("IO Error");
+                    } catch (RepositoryNotInitializedException e) {
+                        printError("Repository not initialized");
+                    } catch (HeadFileCorruptException e) {
+                        printError("HEAD file is corrupt");
+                    } catch (BranchAlreadyExistsException e) {
+                        printError("Branch " + branchName + " already exists");
+                    }
                 }
                 break;
             }
@@ -177,8 +196,8 @@ public class Main {
                     printError("Repository is corrupt");
                 } catch (IndexFileCorruptException e) {
                     printError("Index file is corrupt");
-                } catch (NoSuchRevisionException e) {
-                    printError("No such revision found");
+                } catch (NoSuchRevisionOrBranchException e) {
+                    printError("No such branch or revision found");
                 }
                 break;
             }

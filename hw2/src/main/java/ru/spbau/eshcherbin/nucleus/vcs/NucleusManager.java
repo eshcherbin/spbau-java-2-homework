@@ -305,6 +305,22 @@ public class NucleusManager {
         Files.write(repository.getHeadFile(), (Constants.REFERENCE_HEAD_PREFIX + branchName).getBytes());
     }
 
+    public static void deleteBranch(@NotNull Path path, @NotNull String branchName)
+            throws IOException, RepositoryNotInitializedException, DirectoryExpectedException,
+            HeadFileCorruptException, NoSuchRevisionOrBranchException, DeletingHeadBranchException {
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
+        Path reference = repository.getReferencesDirectory().resolve(branchName);
+        if (!Files.exists(reference)) {
+            throw new NoSuchRevisionOrBranchException();
+        }
+        String currentHead = repository.getCurrentHead();
+        if (currentHead.equals(Constants.REFERENCE_HEAD_PREFIX + branchName)) {
+            throw new DeletingHeadBranchException();
+        }
+        Files.delete(reference);
+    }
+
     public static @Nullable LogMessage getLog(@NotNull Path path, @NotNull String revisionName)
             throws IOException, RepositoryNotInitializedException, DirectoryExpectedException,
             RepositoryCorruptException {
@@ -357,7 +373,7 @@ public class NucleusManager {
 
     public static void checkoutRevision(@NotNull Path path, @NotNull String name)
             throws IOException, RepositoryNotInitializedException, DirectoryExpectedException,
-            HeadFileCorruptException, RepositoryCorruptException, NoSuchRevisionException,
+            HeadFileCorruptException, RepositoryCorruptException, NoSuchRevisionOrBranchException,
             IndexFileCorruptException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
@@ -371,7 +387,7 @@ public class NucleusManager {
         } else {
             newRevisionSha = name;
             if (!repository.isValidSha(newRevisionSha)) {
-                throw new NoSuchRevisionException();
+                throw new NoSuchRevisionOrBranchException();
             }
         }
         String currentHead = repository.getCurrentHead();

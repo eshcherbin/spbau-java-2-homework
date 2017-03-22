@@ -270,7 +270,7 @@ public class NucleusManagerTest {
         assertThat(splitResults2[3], is("test commit message"));
     }
 
-    @Test(expected = NoSuchRevisionException.class)
+    @Test(expected = NoSuchRevisionOrBranchException.class)
     public void checkoutRevisionNoSuchRevisionTest() throws Exception {
         repository = NucleusManager.initRepository(temporaryRootPath);
         Path file1 = temporaryFolder.newFile().toPath();
@@ -306,5 +306,30 @@ public class NucleusManagerTest {
         NucleusManager.checkoutRevision(temporaryRootPath, "branch");
         assertThat(file2.toFile(), is(anExistingFile()));
         assertThat(Files.readAllBytes(file2), is(content2));
+    }
+
+    @Test(expected = DeletingHeadBranchException.class)
+    public void deleteHeadBranchTest() throws Exception {
+        repository = NucleusManager.initRepository(temporaryRootPath);
+        Path file1 = temporaryFolder.newFile().toPath();
+        byte[] content1 = "testContent1".getBytes();
+        Files.write(file1, content1);
+        NucleusManager.addToIndex(file1);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+        NucleusManager.deleteBranch(temporaryRootPath, Constants.DEFAULT_BRANCH_NAME);
+    }
+
+    @Test
+    public void deleteBranchTest() throws Exception {
+        repository = NucleusManager.initRepository(temporaryRootPath);
+        Path file1 = temporaryFolder.newFile().toPath();
+        byte[] content1 = "testContent1".getBytes();
+        Files.write(file1, content1);
+        NucleusManager.addToIndex(file1);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+        NucleusManager.createBranch(temporaryRootPath, "branch");
+        NucleusManager.deleteBranch(temporaryRootPath, Constants.DEFAULT_BRANCH_NAME);
+        assertThat(repository.getReferencesDirectory().resolve(Constants.DEFAULT_BRANCH_NAME).toFile(),
+                is(not(anExistingFile())));
     }
 }
