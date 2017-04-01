@@ -19,10 +19,12 @@ public class Main {
             System.out.println(preMessage);
         }
         System.out.println("usage:" + "\n    nucleus init [<path>]" + "\n    nucleus add <path>"
-                 + "\n    nucleus remove <path>" + "\n    nucleus commit <message>"
-                 + "\n    nucleus branch [delete] <branchName>" + "\n    nucleus checkout <revisionName>"
-                 + "\n    nucleus merge <revisionName>" + "\n    nucleus log" + "\n    nucleus help");
-        System.out.println("shortcuts:" + "\n    rm = remove" + "\n    ci = commit" + "\n    cout = checkout");
+                + "\n    nucleus remove <path>" + "\n    nucleus commit <message>"
+                + "\n    nucleus branch [delete] <branchName>" + "\n    nucleus checkout <revisionName>"
+                + "\n    nucleus merge <revisionName>" + "\n    nucleus log"
+                + "\n    nucleus status" + "\n    clean" + "\n    reset <path>" + "\n    nucleus help");
+        System.out.println("shortcuts:" + "\n    rm = remove" + "\n    ci = commit" + "\n    cout = checkout"
+                + "\n    st = status");
     }
 
     private static void printHelp() {
@@ -60,13 +62,11 @@ public class Main {
                 break;
             }
             case "add": {
-                Path path = Paths.get("").toAbsolutePath();
-                if (args.length >= 2) {
-                    path = path.resolve(args[1]).normalize();
-                } else {
+                if (args.length < 2) {
                     printHelp("No path provided");
                     return;
                 }
+                Path path = Paths.get(args[1]).toAbsolutePath();
                 try {
                     NucleusManager.addToIndex(path);
                 } catch (RepositoryNotInitializedException e) {
@@ -228,6 +228,25 @@ public class Main {
                 } catch (NoSuchRevisionOrBranchException e) {
                     printError("No such branch or revision found");
                 }
+                break;
+            }
+            case "clean": {
+                Path path = Paths.get("").toAbsolutePath();
+                NucleusManager.cleanRepository(path);
+                break;
+            }
+            case "reset": {
+                if (args.length < 2) {
+                    printHelp("No path provided");
+                    return;
+                }
+                Path path = Paths.get(args[1]).toAbsolutePath();
+                NucleusManager.resetFile(path);
+                break;
+            }
+            case "status":
+            case "st": {
+                Path path = Paths.get("").toAbsolutePath();
                 break;
             }
             case "help": {

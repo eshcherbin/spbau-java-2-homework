@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -690,4 +691,16 @@ public class NucleusManager {
         String mergedRevisionSha = deployRevision(repository, revisionName, false);
         commitChanges(path, Constants.MERGE_COMMIT_MESSAGE + revisionName, mergedRevisionSha);
     }
+
+    public static void resetFile(@NotNull Path path) {
+        //TODO: implement reset
+        throw new NotImplementedException();
+    }
+
+    public static void cleanRepository(@NotNull Path path) {
+        //TODO: implement clean
+        throw new NotImplementedException();
+    }
+
+    //TODO: implement status
 }
