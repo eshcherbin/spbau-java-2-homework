@@ -586,7 +586,7 @@ public class NucleusManager {
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
         Path newReference = repository.getReferencesDirectory().resolve(branchName);
         if (Files.exists(newReference)) {
-            logger.error(fatalMarker, "Branch already exists: {}", newReference);
+            logger.error("Branch already exists: {}", newReference);
             throw new BranchAlreadyExistsException();
         }
         String currentHead = repository.getCurrentHead();
@@ -622,7 +622,7 @@ public class NucleusManager {
         }
         String currentHead = repository.getCurrentHead();
         if (currentHead.equals(Constants.REFERENCE_HEAD_PREFIX + branchName)) {
-            logger.error(fatalMarker, "Can't delete current branch");
+            logger.error("Can't delete current branch");
             throw new DeletingHeadBranchException();
         }
         Files.delete(reference);
@@ -692,9 +692,33 @@ public class NucleusManager {
         commitChanges(path, Constants.MERGE_COMMIT_MESSAGE + revisionName, mergedRevisionSha);
     }
 
-    public static void resetFile(@NotNull Path path) {
-        //TODO: implement reset
-        throw new NotImplementedException();
+    /**
+     * Resets given file to current revision's initial state
+     * @param path the path ot the file
+     * @throws IOException if an I/O error occurs
+     * @throws RepositoryNotInitializedException if no repository containing <tt>path</tt> is found
+     * @throws IndexFileCorruptException if the index file's content is corrupt
+     * @throws FileNotInRepositoryException if the specified file is not in the current revision
+     */
+    public static void resetFile(@NotNull Path path)
+            throws IOException, RepositoryNotInitializedException, IndexFileCorruptException,
+            FileNotInRepositoryException {
+        logger.debug("Reset file: {}", path);
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
+        path = path.relativize(repository.getRootDirectory());
+        Map<Path, String> index = readIndexFile(repository);
+        if (!index.containsKey(path)) {
+            logger.error("No such file in index: {}", path);
+            throw new FileNotInRepositoryException();
+        }
+        String sha = index.get(path);
+        if (!repository.isValidSha(sha)) {
+            logger.error(fatalMarker, "No such object exists: {}", sha);
+            throw new IndexFileCorruptException();
+        }
+        Path object = repository.getObject(sha);
+        Files.copy(object, path);
     }
 
     public static void cleanRepository(@NotNull Path path) {
