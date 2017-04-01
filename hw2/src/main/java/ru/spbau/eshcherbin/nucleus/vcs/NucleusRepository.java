@@ -58,6 +58,7 @@ public class NucleusRepository {
             throws RepositoryAlreadyInitializedException, DirectoryExpectedException, IOException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         if (!Files.isDirectory(path)) {
+            logger.error(fatalMarker, "No index file found");
             throw new DirectoryExpectedException();
         }
         if (findRepository(path) != null) {

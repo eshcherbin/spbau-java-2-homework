@@ -3,6 +3,10 @@ package ru.spbau.eshcherbin.nucleus.vcs;
 import com.google.common.base.Splitter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -15,6 +19,9 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
  * Managing class that provides all the VCS functionality via stateless static methods.
  */
 public class NucleusManager {
+    private static final Logger logger = LoggerFactory.getLogger(NucleusManager.class);
+    private static final Marker fatalMarker = MarkerFactory.getMarker("FATAL");
+
     /**
      * Writes an object to the <tt>objects</tt> directory.
      * @param repository the operated repository
@@ -54,19 +61,23 @@ public class NucleusManager {
      */
     private static @NotNull Map<Path, String> readIndexFile(@NotNull NucleusRepository repository)
             throws IndexFileCorruptException, IOException {
+        logger.debug("Reading index file");
         Map<Path, String> index = new HashMap<>();
         Splitter onTabSplitter = Splitter.on('\t').omitEmptyStrings().trimResults();
         if (!Files.exists(repository.getIndexFile())) {
+            logger.error(fatalMarker, "No index file found");
             throw new IndexFileCorruptException();
         }
         for (String line : Files.readAllLines(repository.getIndexFile())) {
             List<String> splitResult = onTabSplitter.splitToList(line);
             if (splitResult.size() != 2 || !repository.isValidSha(splitResult.get(1))) {
+                logger.error(fatalMarker, "Invalid line in index file: '{}'", line);
                 throw new IndexFileCorruptException();
             }
             try {
                 index.put(Paths.get(splitResult.get(0)), splitResult.get(1));
             } catch (InvalidPathException e) {
+                logger.error(fatalMarker, "Invalid path in index file: '{}'", splitResult.get(0));
                 throw new IndexFileCorruptException();
             }
         }
@@ -84,6 +95,7 @@ public class NucleusManager {
     private static void updateIndex(@NotNull NucleusRepository repository, @NotNull Map<Path, String> addedFiles,
                                     @NotNull Set<Path> removedFiles)
             throws IOException, IndexFileCorruptException {
+        logger.debug("Updating index file");
         Map<Path, String> index = readIndexFile(repository);
         index.keySet().removeAll(removedFiles);
         index.putAll(addedFiles);
@@ -102,6 +114,7 @@ public class NucleusManager {
      */
     private static @NotNull VcsTree collectTreeFromIndex(@NotNull NucleusRepository repository)
             throws IndexFileCorruptException, IOException {
+        logger.debug("Collecting a tree from index file");
         Map<Path, String> index = readIndexFile(repository);
         Map<Path, VcsTree> pathToTree = new HashMap<>();
         pathToTree.put(Paths.get(""), new VcsTree(""));
@@ -138,15 +151,19 @@ public class NucleusManager {
      */
     private static @NotNull VcsCommit readCommit(@NotNull NucleusRepository repository, @NotNull String commitSha)
             throws RepositoryCorruptException, IOException {
+        logger.debug("Reading a commit object");
         if (!repository.isValidSha(commitSha)) {
+            logger.error(fatalMarker, "No such object exists: {}", commitSha);
             throw new RepositoryCorruptException();
         }
         List<String> commitLines = Files.readAllLines(repository.getObject(commitSha));
         if (commitLines.size() < 4) {
+            logger.error(fatalMarker, "Too few lines in commit object");
             throw new RepositoryCorruptException();
         }
         String treeSha = commitLines.get(0);
         if (!repository.isValidSha(treeSha)) {
+            logger.error(fatalMarker, "No such object exists: {}", treeSha);
             throw new RepositoryCorruptException();
         }
         String author = commitLines.get(1);
@@ -155,6 +172,7 @@ public class NucleusManager {
         try {
              timeInMilliseconds = Long.parseLong(timeInMillisecondsString);
         } catch (NumberFormatException e) {
+            logger.error(fatalMarker, "Invalid number: {}", timeInMillisecondsString);
             throw new RepositoryCorruptException();
         }
         int messageStartLineIndex = 3;
@@ -163,6 +181,7 @@ public class NucleusManager {
             ++messageStartLineIndex;
         }
         if (messageStartLineIndex == commitLines.size()) {
+            logger.error(fatalMarker, "No message in commit object");
             throw new RepositoryCorruptException();
         }
         StringBuilder messageBuilder = new StringBuilder(commitLines.get(messageStartLineIndex)
@@ -178,6 +197,7 @@ public class NucleusManager {
             String line = commitLines.get(i);
             if (!line.startsWith(Constants.PARENT_COMMIT_PREFIX) ||
                     !repository.isValidSha(line.substring(Constants.PARENT_COMMIT_PREFIX.length()))) {
+                logger.error(fatalMarker, "Invalid parent line in commit object");
                 throw new RepositoryCorruptException();
             }
             parentShaSet.add(line.substring(Constants.PARENT_COMMIT_PREFIX.length()));
@@ -210,7 +230,9 @@ public class NucleusManager {
     private static @NotNull VcsTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha,
                                              @NotNull String treeName)
             throws RepositoryCorruptException, IOException {
+        logger.debug("Reading a tree object");
         if (!repository.isValidSha(treeSha)) {
+            logger.error(fatalMarker, "No such object exists: {}", treeSha);
             throw new RepositoryCorruptException();
         }
         VcsTree tree = new VcsTree(treeName);
@@ -218,21 +240,25 @@ public class NucleusManager {
         for (String line : Files.readAllLines(repository.getObject(treeSha))) {
             List<String> splitResults = onTabSplitter.splitToList(line);
             if (splitResults.size() != 3) {
+                logger.error(fatalMarker, "Invalid line in tree object: {}", line);
                 throw new RepositoryCorruptException();
             }
             VcsObjectType type;
             try {
                 type = VcsObjectType.valueOf(splitResults.get(0));
             } catch (IllegalArgumentException e) {
+                logger.error(fatalMarker, "Invalid type line in tree object: {}", splitResults.get(0));
                 throw new RepositoryCorruptException();
             }
             if (!(type == VcsObjectType.BLOB || type == VcsObjectType.TREE)) {
+                logger.error(fatalMarker, "Invalid type in tree object: {}", type);
                 throw new RepositoryCorruptException();
             }
             String sha = splitResults.get(1);
             String name = splitResults.get(2);
             if (type == VcsObjectType.BLOB) {
                 if (!repository.isValidSha(sha)) {
+                    logger.error(fatalMarker, "No such object exists: {}", sha);
                     throw new RepositoryCorruptException();
                 }
                 tree.addChild(new VcsObjectWithNameAndKnownSha(name, sha, type));
@@ -288,16 +314,19 @@ public class NucleusManager {
             throws IOException, RepositoryNotInitializedException,
             RepositoryCorruptException, NoSuchRevisionOrBranchException, HeadFileCorruptException,
             IndexFileCorruptException {
+        logger.debug("Deploying revision {}, removeCurrent = {}", revisionName, removeCurrent);
         String deployedRevisionSha;
         Path possibleReference = repository.getReferencesDirectory().resolve(revisionName);
         if (Files.exists(possibleReference)) {
             deployedRevisionSha = Files.readAllLines(possibleReference).get(0);
             if (!repository.isValidSha(deployedRevisionSha)) {
+                logger.error(fatalMarker, "No such object exists: {}", deployedRevisionSha);
                 throw new RepositoryCorruptException();
             }
         } else {
             deployedRevisionSha = revisionName;
             if (!repository.isValidSha(deployedRevisionSha)) {
+                logger.error(fatalMarker, "No such object exists: {}", deployedRevisionSha);
                 throw new NoSuchRevisionOrBranchException();
             }
         }
@@ -307,6 +336,7 @@ public class NucleusManager {
             String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
             Path reference = repository.getReferencesDirectory().resolve(currentBranch);
             if (!Files.exists(reference)) {
+                logger.error(fatalMarker, "No such reference exists: {}", reference);
                 throw new HeadFileCorruptException();
             }
             currentRevisionSha = Files.readAllLines(reference).get(0);
@@ -314,6 +344,7 @@ public class NucleusManager {
             currentRevisionSha = currentHead;
         }
         if (!repository.isValidSha(currentRevisionSha)) {
+            logger.error(fatalMarker, "No such object exists: {}", currentRevisionSha);
             throw new RepositoryCorruptException();
         }
 
@@ -335,6 +366,7 @@ public class NucleusManager {
             Path addedFile = entry.getKey();
             String sha = entry.getValue();
             if (!repository.isValidSha(sha)) {
+                logger.error(fatalMarker, "No such object exists: {}", sha);
                 throw new RepositoryCorruptException();
             }
             Files.copy(repository.getObject(sha), repository.getRootDirectory().resolve(addedFile), REPLACE_EXISTING);
@@ -357,6 +389,7 @@ public class NucleusManager {
     private static void commitChanges(@NotNull Path path, @NotNull String message, @Nullable String additionalParentSha)
             throws IOException, RepositoryNotInitializedException, HeadFileCorruptException,
             IndexFileCorruptException {
+        logger.debug("Commiting changes");
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
         String currentHead = repository.getCurrentHead();
@@ -409,6 +442,7 @@ public class NucleusManager {
     private static @Nullable LogMessage getLog(@NotNull Path path, @NotNull String revisionName)
             throws IOException, RepositoryNotInitializedException,
             RepositoryCorruptException {
+        logger.debug("Constructing a revisions log for revision {}", revisionName);
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
         String startCommitSha;
@@ -416,6 +450,7 @@ public class NucleusManager {
             String branchName = revisionName.substring(Constants.REFERENCE_HEAD_PREFIX.length());
             Path branchReference = repository.getReferencesDirectory().resolve(branchName);
             if (!Files.exists(branchReference)) {
+                logger.error(fatalMarker, "No such reference exists: {}", branchReference);
                 throw new RepositoryCorruptException();
             }
             startCommitSha = Files.readAllLines(branchReference).get(0);
@@ -458,6 +493,7 @@ public class NucleusManager {
      */
     public static @NotNull NucleusRepository initializeRepository(@NotNull Path path)
             throws IOException, DirectoryExpectedException, RepositoryAlreadyInitializedException {
+        logger.debug("Initializing a repository at {}", path);
         NucleusRepository repository = NucleusRepository.createRepository(path);
         Files.createDirectory(repository.getObjectsDirectory());
         Files.createDirectory(repository.getReferencesDirectory());
@@ -475,6 +511,7 @@ public class NucleusManager {
      */
     public static void addToIndex(@NotNull Path path)
             throws RepositoryNotInitializedException, IOException, IndexFileCorruptException {
+        logger.debug("Adding file to index: {}", path);
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository;
         repository = NucleusRepository.resolveRepository(path, true);
@@ -501,6 +538,7 @@ public class NucleusManager {
      */
     public static void removeFromIndex(@NotNull Path path)
             throws IOException, RepositoryNotInitializedException, IndexFileCorruptException {
+        logger.debug("Removing file: {}", path);
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository;
         repository = NucleusRepository.resolveRepository(path, true);
@@ -542,10 +580,12 @@ public class NucleusManager {
     public static void createBranch(@NotNull Path path, @NotNull String branchName)
             throws IOException, RepositoryNotInitializedException,
             HeadFileCorruptException, BranchAlreadyExistsException {
+        logger.debug("Creating branch: {}", branchName);
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
         Path newReference = repository.getReferencesDirectory().resolve(branchName);
         if (Files.exists(newReference)) {
+            logger.error(fatalMarker, "Branch already exists: {}", newReference);
             throw new BranchAlreadyExistsException();
         }
         String currentHead = repository.getCurrentHead();
@@ -571,14 +611,17 @@ public class NucleusManager {
     public static void deleteBranch(@NotNull Path path, @NotNull String branchName)
             throws IOException, RepositoryNotInitializedException,
             HeadFileCorruptException, NoSuchRevisionOrBranchException, DeletingHeadBranchException {
+        logger.debug("Deleting branch: {}", branchName);
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
         Path reference = repository.getReferencesDirectory().resolve(branchName);
         if (!Files.exists(reference)) {
+            logger.error(fatalMarker, "No such reference exists: {}", reference);
             throw new NoSuchRevisionOrBranchException();
         }
         String currentHead = repository.getCurrentHead();
         if (currentHead.equals(Constants.REFERENCE_HEAD_PREFIX + branchName)) {
+            logger.error(fatalMarker, "Can't delete current branch");
             throw new DeletingHeadBranchException();
         }
         Files.delete(reference);
@@ -599,6 +642,7 @@ public class NucleusManager {
             throws IOException, RepositoryNotInitializedException,
             HeadFileCorruptException, RepositoryCorruptException, NoSuchRevisionOrBranchException,
             IndexFileCorruptException {
+        logger.debug("Checkout revision: {}", revisionName);
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
         deployRevision(repository, revisionName, true);
@@ -640,6 +684,7 @@ public class NucleusManager {
     public static void mergeRevision(@NotNull Path path, @NotNull String revisionName)
             throws IOException, RepositoryNotInitializedException, HeadFileCorruptException,
             IndexFileCorruptException, NoSuchRevisionOrBranchException, RepositoryCorruptException {
+        logger.debug("Merge revision: {}", revisionName);
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
         String mergedRevisionSha = deployRevision(repository, revisionName, false);
