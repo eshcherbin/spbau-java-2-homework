@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Configuration>
+    <Appenders>
+        <File name="fileAppender" fileName="nucleus.log" append="true">
+            <PatternLayout>
+                <pattern>%d, %p, %c{1.}: %m%n</pattern>
+            </PatternLayout>
+        </File>
+    </Appenders>
+    <Loggers>
+        <Root level="all">
+            <appender-ref ref="fileAppender"/>
+        </Root>
+    </Loggers>
+</Configuration>

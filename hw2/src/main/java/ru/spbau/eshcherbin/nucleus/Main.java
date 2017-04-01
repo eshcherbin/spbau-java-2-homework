@@ -2,6 +2,8 @@ package ru.spbau.eshcherbin.nucleus;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.spbau.eshcherbin.nucleus.vcs.*;
 
 import java.io.IOException;
@@ -9,6 +11,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class Main {
+    private static final String logFileName = "nucleus.log";
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+
     private static void printHelp(@Nullable String preMessage) {
         if (preMessage != null) {
             System.out.println(preMessage);
@@ -25,11 +30,14 @@ public class Main {
     }
 
     private static void printError(@NotNull String errorMessage) {
-        System.err.println("Error: " + errorMessage);
+        logger.error(errorMessage);
+        System.err.println("An error occured");
+        System.err.println("Consult " + logFileName + " for details");
         System.exit(1);
     }
 
     public static void main(String[] args) {
+        logger.info("Nucleus started with following arguments: {}", (Object) args);
         if (args.length == 0) {
             printHelp("No arguments provided");
             return;
