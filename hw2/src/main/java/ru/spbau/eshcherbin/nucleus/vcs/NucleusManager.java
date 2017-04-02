@@ -704,21 +704,27 @@ public class NucleusManager {
             throws IOException, RepositoryNotInitializedException, IndexFileCorruptException,
             FileNotInRepositoryException {
         logger.debug("Reset file: {}", path);
-        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
-        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
-        path = path.relativize(repository.getRootDirectory());
-        Map<Path, String> index = readIndexFile(repository);
-        if (!index.containsKey(path)) {
+        if (!Files.exists(path)) {
             logger.error("No such file in index: {}", path);
             throw new FileNotInRepositoryException();
         }
-        String sha = index.get(path);
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
+        Path relativePath = repository.getRootDirectory().relativize(path);
+        Map<Path, String> index = readIndexFile(repository);
+        if (!index.containsKey(relativePath)) {
+            logger.debug("Index: {}", index);
+            logger.error("No such file in index: {}", relativePath);
+            throw new FileNotInRepositoryException();
+        }
+        String sha = index.get(relativePath);
         if (!repository.isValidSha(sha)) {
             logger.error(fatalMarker, "No such object exists: {}", sha);
             throw new IndexFileCorruptException();
         }
         Path object = repository.getObject(sha);
-        Files.copy(object, path);
+        logger.debug("Object's path is {} and file path is {}", object, path);
+        Files.copy(object, path, REPLACE_EXISTING);
     }
 
     public static void cleanRepository(@NotNull Path path) {

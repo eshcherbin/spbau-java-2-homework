@@ -33,7 +33,7 @@ public class Main {
 
     private static void printError(@NotNull String errorMessage) {
         logger.error(errorMessage);
-        System.err.println("An error occured");
+        System.err.println("An error occured: " + errorMessage);
         System.err.println("Consult " + logFileName + " for details");
         System.exit(1);
     }
@@ -241,7 +241,17 @@ public class Main {
                     return;
                 }
                 Path path = Paths.get(args[1]).toAbsolutePath();
-                NucleusManager.resetFile(path);
+                try {
+                    NucleusManager.resetFile(path);
+                } catch (IOException e) {
+                    printError("IO Error");
+                } catch (RepositoryNotInitializedException e) {
+                    printError("Repository not initialized");
+                } catch (IndexFileCorruptException e) {
+                    printError("Index file is corrupt");
+                } catch (FileNotInRepositoryException e) {
+                    printError("File not in current revision");
+                }
                 break;
             }
             case "status":

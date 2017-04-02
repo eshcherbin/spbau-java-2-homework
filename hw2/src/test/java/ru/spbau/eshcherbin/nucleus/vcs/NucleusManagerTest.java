@@ -384,4 +384,29 @@ public class NucleusManagerTest {
                 is(true));
         assertThat(message, is(Constants.MESSAGE_COMMIT_PREFIX + Constants.MERGE_COMMIT_MESSAGE + "branch"));
     }
+
+    @Test(expected = FileNotInRepositoryException.class)
+    public void resetFileNotInRepositoryTest() throws Exception {
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
+        Path file1 = temporaryFolder.newFile().toPath();
+        NucleusManager.addToIndex(file1);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+        Path file2 = temporaryFolder.newFile().toPath();
+        NucleusManager.resetFile(file2);
+    }
+
+    @Test
+    public void resetFileTest() throws Exception {
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
+        Path file = temporaryFolder.newFile().toPath();
+        byte[] content1 = "testContent1".getBytes();
+        Files.write(file, content1);
+        NucleusManager.addToIndex(file);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+
+        byte[] content2 = "testContent2".getBytes();
+        Files.write(file, content2);
+        NucleusManager.resetFile(file);
+        assertThat(Files.readAllBytes(file), is(content1));
+    }
 }
