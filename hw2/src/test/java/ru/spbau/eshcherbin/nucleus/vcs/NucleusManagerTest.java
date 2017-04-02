@@ -1,6 +1,7 @@
 package ru.spbau.eshcherbin.nucleus.vcs;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.jetbrains.annotations.NotNull;
@@ -414,13 +415,60 @@ public class NucleusManagerTest {
     public void cleanRepositoryTest() throws Exception {
         repository = NucleusManager.initializeRepository(temporaryRootPath);
         Path file = temporaryFolder.newFile().toPath();
-        byte[] content1 = "testContent1".getBytes();
-        Files.write(file, content1);
+        byte[] content = "testContent1".getBytes();
+        Files.write(file, content);
         NucleusManager.addToIndex(file);
         NucleusManager.commitChanges(temporaryRootPath, "test commit message");
         Path file2 = temporaryFolder.newFile().toPath();
         NucleusManager.cleanRepository(temporaryRootPath);
         assertThat(file2.toFile(), is(not(anExistingFile())));
         assertThat(repository.getRepositoryDirectory().toFile(), is(anExistingDirectory()));
+    }
+
+    @Test
+    public void getRepositoryStatusTest() throws Exception {
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
+        Path file1 = temporaryFolder.newFile().toPath();
+        byte[] content1 = "testContent1".getBytes();
+        Files.write(file1, content1);
+        NucleusManager.addToIndex(file1);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+        Path file2 = temporaryFolder.newFile().toPath();
+
+        RepositoryStatus status = NucleusManager.getRepositoryStatus(temporaryRootPath);
+        assertThat(status.getRevision(), is(Constants.DEFAULT_BRANCH_NAME));
+        assertThat(status.getEntries(),
+                is(ImmutableSet.of(new StatusEntry(temporaryRootPath.relativize(file2), StatusEntryType.UNTRACKED))));
+
+        NucleusManager.addToIndex(file2);
+
+        status = NucleusManager.getRepositoryStatus(temporaryRootPath);
+        assertThat(status.getEntries(),
+                is(ImmutableSet.of(new StatusEntry(temporaryRootPath.relativize(file2), StatusEntryType.ADDED))));
+
+        Files.write(file1, new byte[0]);
+
+        status = NucleusManager.getRepositoryStatus(temporaryRootPath);
+        assertThat(status.getEntries(),
+                is(ImmutableSet.of(new StatusEntry(temporaryRootPath.relativize(file2), StatusEntryType.ADDED),
+                        new StatusEntry(temporaryRootPath.relativize(file1), StatusEntryType.UNSTAGED))));
+
+        NucleusManager.addToIndex(file1);
+        NucleusManager.commitChanges(temporaryRootPath, "second commit");
+        Files.write(file1, content1);
+        NucleusManager.addToIndex(file1);
+        NucleusManager.removeFromIndex(file2);
+
+        status = NucleusManager.getRepositoryStatus(temporaryRootPath);
+        assertThat(status.getEntries(),
+                is(ImmutableSet.of(new StatusEntry(temporaryRootPath.relativize(file2), StatusEntryType.REMOVED),
+                        new StatusEntry(temporaryRootPath.relativize(file1), StatusEntryType.MODIFIED))));
+
+        NucleusManager.commitChanges(temporaryRootPath, "third commit");
+        Files.delete(file1);
+
+        status = NucleusManager.getRepositoryStatus(temporaryRootPath);
+        assertThat(status.getEntries(),
+                is(ImmutableSet.of(new StatusEntry(temporaryRootPath.relativize(file1), StatusEntryType.MISSING))));
     }
 }

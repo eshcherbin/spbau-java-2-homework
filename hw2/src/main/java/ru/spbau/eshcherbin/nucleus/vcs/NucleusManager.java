@@ -809,7 +809,7 @@ public class NucleusManager {
                 .collect(Collectors.toSet());
         for (Path file : allFiles) {
             if (index.containsKey(file)) {
-                String fileSha = calculateSha(file);
+                String fileSha = calculateSha(repository.getRootDirectory().resolve(file));
                 if (!fileSha.equals(index.get(file))) {
                     status.addEntry(file, StatusEntryType.UNSTAGED);
                 }
