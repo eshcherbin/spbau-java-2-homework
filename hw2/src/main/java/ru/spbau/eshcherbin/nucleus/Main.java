@@ -39,7 +39,6 @@ public class Main {
     }
 
     public static void main(String[] args) {
-
         logger.info("Nucleus started with following arguments: {}", (Object) args);
         if (args.length == 0) {
             printHelp("No arguments provided");

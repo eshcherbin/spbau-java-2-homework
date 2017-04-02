@@ -409,4 +409,18 @@ public class NucleusManagerTest {
         NucleusManager.resetFile(file);
         assertThat(Files.readAllBytes(file), is(content1));
     }
+
+    @Test
+    public void cleanRepositoryTest() throws Exception {
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
+        Path file = temporaryFolder.newFile().toPath();
+        byte[] content1 = "testContent1".getBytes();
+        Files.write(file, content1);
+        NucleusManager.addToIndex(file);
+        NucleusManager.commitChanges(temporaryRootPath, "test commit message");
+        Path file2 = temporaryFolder.newFile().toPath();
+        NucleusManager.cleanRepository(temporaryRootPath);
+        assertThat(file2.toFile(), is(not(anExistingFile())));
+        assertThat(repository.getRepositoryDirectory().toFile(), is(anExistingDirectory()));
+    }
 }
