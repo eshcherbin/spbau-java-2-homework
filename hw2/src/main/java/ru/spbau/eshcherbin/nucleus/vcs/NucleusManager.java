@@ -692,7 +692,7 @@ public class NucleusManager {
     }
 
     /**
-     * Resets given file to current revision's initial state
+     * Resets given file to current revision's initial state.
      * @param path the path ot the file
      * @throws IOException if an I/O error occurs
      * @throws RepositoryNotInitializedException if no repository containing <tt>path</tt> is found
@@ -722,6 +722,13 @@ public class NucleusManager {
         Files.copy(object, path, REPLACE_EXISTING);
     }
 
+    /**
+     * Removes all files that are not added to the repository.
+     * @param path a path inside the repository
+     * @throws IOException if an I/O error occurs
+     * @throws RepositoryNotInitializedException if no repository containing <tt>path</tt> is found
+     * @throws IndexFileCorruptException if the index file's content is corrupt
+     */
     public static void cleanRepository(@NotNull Path path)
             throws IOException, RepositoryNotInitializedException, IndexFileCorruptException {
         logger.debug("Clean repository");
