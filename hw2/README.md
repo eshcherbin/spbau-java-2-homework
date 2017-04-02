@@ -11,7 +11,7 @@ Command line options:
 - `nucleus add <path>` — add a file to current working copy
 - `nucleus remove <path>` — remove file from current working copy and filesystem
 - `nucleus commit <message>` — commit current changes
-- `nucleus branch [delete] <branchName>`
+- `nucleus branch [delete] <revision>`
     * without `delete`: create a new branch
     * with `delete`: remove specified branch
 - `nucleus checkout <revisionName>` — check out specified revision

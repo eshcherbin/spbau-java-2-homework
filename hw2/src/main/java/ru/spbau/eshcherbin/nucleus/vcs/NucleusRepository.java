@@ -169,6 +169,21 @@ public class NucleusRepository {
         }
     }
 
+    public @NotNull String getRevisionSha(@NotNull String revision) throws HeadFileCorruptException, IOException{
+        String revisionSha;
+        if (revision.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
+            String currentBranch = revision.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+            Path reference = getReferencesDirectory().resolve(currentBranch);
+            if (!Files.exists(reference)) {
+                throw new HeadFileCorruptException();
+            }
+            revisionSha = Files.readAllLines(reference).get(0);
+        } else {
+            revisionSha = revision;
+        }
+        return revisionSha;
+    }
+
     /**
      * Checks if the given string is a valid sha of some object within this repository
      * @param shaToCheck the sha that is checked

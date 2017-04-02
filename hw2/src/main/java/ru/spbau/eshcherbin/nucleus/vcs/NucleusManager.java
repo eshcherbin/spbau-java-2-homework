@@ -1,6 +1,8 @@
 package ru.spbau.eshcherbin.nucleus.vcs;
 
 import com.google.common.base.Splitter;
+import com.google.common.hash.Hashing;
+import com.google.common.hash.HashingInputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -22,6 +24,8 @@ public class NucleusManager {
     private static final Logger logger = LoggerFactory.getLogger(NucleusManager.class);
     private static final Marker fatalMarker = MarkerFactory.getMarker("FATAL");
 
+    private static final int BUFFER_SIZE = 4096;
+
     /**
      * Writes an object to the <tt>objects</tt> directory.
      * @param repository the operated repository
@@ -29,7 +33,7 @@ public class NucleusManager {
      * @return the written object's sha
      * @throws IOException is an I/O error occurs
      */
-    private static String addVCSObject(@NotNull NucleusRepository repository, @NotNull VcsObject object)
+    private static String addVcsObject(@NotNull NucleusRepository repository, @NotNull VcsObject object)
             throws IOException {
         Path objectDirectoryPath = repository.getObjectsDirectory()
                 .resolve(object.getSha().substring(0, Constants.OBJECT_DIRECTORY_NAME_LENGTH));
@@ -49,7 +53,7 @@ public class NucleusManager {
      * @throws IOException is an I/O error occurs
      */
     private static String addFile(@NotNull NucleusRepository repository, @NotNull Path filePath) throws IOException {
-        return addVCSObject(repository, new VcsBlob(Files.readAllBytes(filePath), filePath.getFileName().toString()));
+        return addVcsObject(repository, new VcsBlob(Files.readAllBytes(filePath), filePath.getFileName().toString()));
     }
 
     /**
@@ -332,16 +336,11 @@ public class NucleusManager {
         }
         String currentHead = repository.getCurrentHead();
         String currentRevisionSha;
-        if (currentHead.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
-            String currentBranch = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
-            Path reference = repository.getReferencesDirectory().resolve(currentBranch);
-            if (!Files.exists(reference)) {
-                logger.error(fatalMarker, "No such reference exists: {}", reference);
-                throw new HeadFileCorruptException();
-            }
-            currentRevisionSha = Files.readAllLines(reference).get(0);
-        } else {
-            currentRevisionSha = currentHead;
+        try {
+            currentRevisionSha = repository.getRevisionSha(currentHead);
+        } catch (HeadFileCorruptException e) {
+            logger.error(fatalMarker, "HEAD file content is corrupt: {}", currentHead);
+            throw e;
         }
         if (!repository.isValidSha(currentRevisionSha)) {
             logger.error(fatalMarker, "No such object exists: {}", currentRevisionSha);
@@ -401,7 +400,7 @@ public class NucleusManager {
                 parentSha = Files.readAllLines(reference).get(0);
             }
             VcsTree tree = collectTreeFromIndex(repository);
-            addVCSObject(repository, tree);
+            addVcsObject(repository, tree);
             VcsCommit commit = new VcsCommit(tree.getSha(), message, System.getProperty(Constants.USER_NAME_PROPERTY),
                     System.currentTimeMillis());
             if (parentSha != null) {
@@ -410,7 +409,7 @@ public class NucleusManager {
             if (additionalParentSha != null) {
                 commit.getParents().add(additionalParentSha);
             }
-            addVCSObject(repository, commit);
+            addVcsObject(repository, commit);
             Files.write(repository.getHeadFile(), currentHead.getBytes());
             if (!Files.exists(reference)) {
                 Files.createFile(reference);
@@ -418,14 +417,14 @@ public class NucleusManager {
             Files.write(reference, commit.getSha().getBytes());
         } else {
             VcsTree tree = collectTreeFromIndex(repository);
-            addVCSObject(repository, tree);
+            addVcsObject(repository, tree);
             VcsCommit commit = new VcsCommit(tree.getSha(), message, System.getProperty(Constants.USER_NAME_PROPERTY),
                     System.currentTimeMillis());
             commit.getParents().add(currentHead);
             if (additionalParentSha != null) {
                 commit.getParents().add(additionalParentSha);
             }
-            String commitSha = addVCSObject(repository, commit);
+            String commitSha = addVcsObject(repository, commit);
             Files.write(repository.getHeadFile(), commitSha.getBytes());
         }
     }
@@ -480,6 +479,18 @@ public class NucleusManager {
             currentLogMessage = new LogMessage(commit, currentLogMessage);
         }
         return currentLogMessage;
+    }
+
+    private static @NotNull String calculateSha(@NotNull Path file) throws IOException {
+        HashingInputStream hashingInputStream = new HashingInputStream(Hashing.sha1(), Files.newInputStream(file));
+        byte[] buffer = new byte[BUFFER_SIZE];
+        int bytesRead;
+        do {
+            bytesRead = hashingInputStream.read(buffer, 0, BUFFER_SIZE);
+        } while (bytesRead != -1);
+        String sha = hashingInputStream.hash().toString();
+        hashingInputStream.close();
+        return sha;
     }
 
     /**
@@ -738,13 +749,61 @@ public class NucleusManager {
         Set<Path> allFiles = Files.walk(repository.getRootDirectory())
                 .filter(file -> !file.startsWith(repository.getRepositoryDirectory())
                                 && Files.isRegularFile(file))
+                .map(file -> repository.getRootDirectory().relativize(file))
                 .collect(Collectors.toSet());
         for (Path file : allFiles) {
-            if (!index.containsKey(repository.getRootDirectory().relativize(file))) {
-                Files.deleteIfExists(file);
+            if (!index.containsKey(file)) {
+                Files.deleteIfExists(repository.getRootDirectory().resolve(file));
             }
         }
     }
 
-    //TODO: implement status
+    public static RepositoryStatus getRepositoryStatus(@NotNull Path path)
+            throws IOException, RepositoryNotInitializedException, HeadFileCorruptException,
+            IndexFileCorruptException, RepositoryCorruptException {
+        logger.debug("Collecting repository status");
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
+        String currentHead = repository.getCurrentHead();
+        String revision;
+        if (currentHead.startsWith(Constants.REFERENCE_HEAD_PREFIX)) {
+            revision = currentHead.substring(Constants.REFERENCE_HEAD_PREFIX.length());
+        } else {
+            revision = currentHead;
+        }
+        String revisionSha = repository.getRevisionSha(revision);
+        VcsCommit commit = readCommit(repository, revisionSha);
+        VcsTree tree = readTree(repository, commit.getTreeSha());
+        Map<Path, String> treeContent = walkVcsTree(tree);
+        Map<Path, String> index = readIndexFile(repository);
+        RepositoryStatus status = new RepositoryStatus(revision);
+        for (Path fileInIndex : index.keySet()) {
+            if (!treeContent.containsKey(fileInIndex)) {
+                status.addEntry(fileInIndex, StatusEntryType.ADDED);
+            } else if (!treeContent.get(fileInIndex).equals(index.get(fileInIndex))) {
+                status.addEntry(fileInIndex, StatusEntryType.MODIFIED);
+            }
+        }
+        for (Path fileInTree : treeContent.keySet()) {
+            if (!index.containsKey(fileInTree)) {
+                status.addEntry(fileInTree, StatusEntryType.REMOVED);
+            }
+        }
+        Set<Path> allFiles = Files.walk(repository.getRootDirectory())
+                .filter(file -> !file.startsWith(repository.getRepositoryDirectory())
+                        && Files.isRegularFile(file))
+                .map(file -> repository.getRootDirectory().relativize(file))
+                .collect(Collectors.toSet());
+        for (Path file : allFiles) {
+            if (index.containsKey(file)) {
+                String fileSha = calculateSha(file);
+                if (!fileSha.equals(index.get(file))) {
+                    status.addEntry(file, StatusEntryType.UNSTAGED);
+                }
+            } else {
+                status.addEntry(file, StatusEntryType.UNTRACKED);
+            }
+        }
+        return status;
+    }
 }
