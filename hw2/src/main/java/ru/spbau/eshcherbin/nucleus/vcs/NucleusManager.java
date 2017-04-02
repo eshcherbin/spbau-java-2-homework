@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -704,11 +703,7 @@ public class NucleusManager {
             throws IOException, RepositoryNotInitializedException, IndexFileCorruptException,
             FileNotInRepositoryException {
         logger.debug("Reset file: {}", path);
-        if (!Files.exists(path)) {
-            logger.error("No such file in index: {}", path);
-            throw new FileNotInRepositoryException();
-        }
-        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        path = path.toAbsolutePath();
         NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
         Path relativePath = repository.getRootDirectory().relativize(path);
         Map<Path, String> index = readIndexFile(repository);
@@ -727,9 +722,21 @@ public class NucleusManager {
         Files.copy(object, path, REPLACE_EXISTING);
     }
 
-    public static void cleanRepository(@NotNull Path path) {
-        //TODO: implement clean
-        throw new NotImplementedException();
+    public static void cleanRepository(@NotNull Path path)
+            throws IOException, RepositoryNotInitializedException, IndexFileCorruptException {
+        logger.debug("Clean repository");
+        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path, false);
+        Map<Path, String> index = readIndexFile(repository);
+        Set<Path> allFiles = Files.walk(repository.getRootDirectory())
+                .filter(file -> !file.startsWith(repository.getRepositoryDirectory())
+                                && Files.isRegularFile(file))
+                .collect(Collectors.toSet());
+        for (Path file : allFiles) {
+            if (!index.containsKey(repository.getRootDirectory().relativize(file))) {
+                Files.deleteIfExists(file);
+            }
+        }
     }
 
     //TODO: implement status

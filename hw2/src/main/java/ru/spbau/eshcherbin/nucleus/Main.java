@@ -11,7 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class Main {
-    private static final String logFileName = "nucleus.log";
+    private static final String logFileName = System.getProperty("user.home") + "/.nucleus.log";
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
     private static void printHelp(@Nullable String preMessage) {
@@ -39,6 +39,7 @@ public class Main {
     }
 
     public static void main(String[] args) {
+
         logger.info("Nucleus started with following arguments: {}", (Object) args);
         if (args.length == 0) {
             printHelp("No arguments provided");
@@ -232,7 +233,15 @@ public class Main {
             }
             case "clean": {
                 Path path = Paths.get("").toAbsolutePath();
-                NucleusManager.cleanRepository(path);
+                try {
+                    NucleusManager.cleanRepository(path);
+                } catch (IOException e) {
+                    printError("IO Error");
+                } catch (RepositoryNotInitializedException e) {
+                    printError("Repository not initialized");
+                } catch (IndexFileCorruptException e) {
+                    printError("Index file is corrupt");
+                }
                 break;
             }
             case "reset": {
@@ -244,6 +253,7 @@ public class Main {
                 try {
                     NucleusManager.resetFile(path);
                 } catch (IOException e) {
+                    e.printStackTrace();
                     printError("IO Error");
                 } catch (RepositoryNotInitializedException e) {
                     printError("Repository not initialized");

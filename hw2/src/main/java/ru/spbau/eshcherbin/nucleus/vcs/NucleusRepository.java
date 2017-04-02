@@ -30,7 +30,7 @@ public class NucleusRepository {
      */
     public static @Nullable NucleusRepository findRepository(@NotNull Path path)
             throws IOException {
-        path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
+        path = path.toAbsolutePath();
         if (!Files.isDirectory(path)) {
             path = path.getParent();
         }
