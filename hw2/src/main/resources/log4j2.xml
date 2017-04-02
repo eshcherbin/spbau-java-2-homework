@@ -3,7 +3,7 @@
     <Appenders>
         <File name="fileAppender" fileName="${sys:user.home}/.nucleus.log" append="true">
             <PatternLayout>
-                <pattern>[%d  %p  %c{1}] %m%n</pattern>
+                <pattern>[%d %marker%p %c{1}] %m%n</pattern>
             </PatternLayout>
         </File>
     </Appenders>

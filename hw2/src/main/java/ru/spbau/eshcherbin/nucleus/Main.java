@@ -252,7 +252,6 @@ public class Main {
                 try {
                     NucleusManager.resetFile(path);
                 } catch (IOException e) {
-                    e.printStackTrace();
                     printError("IO Error");
                 } catch (RepositoryNotInitializedException e) {
                     printError("Repository not initialized");
@@ -266,6 +265,23 @@ public class Main {
             case "status":
             case "st": {
                 Path path = Paths.get("").toAbsolutePath();
+                try {
+                    RepositoryStatus status = NucleusManager.getRepositoryStatus(path);
+                    System.out.println("Current revision: " + status.getRevision());
+                    for (StatusEntry statusEntry : status.getEntries()) {
+                        System.out.println(statusEntry.getType() + "\t" + statusEntry.getPath());
+                    }
+                } catch (IOException e) {
+                    printError("IO Error");
+                } catch (RepositoryNotInitializedException e) {
+                    printError("Repository not initialized");
+                } catch (HeadFileCorruptException e) {
+                    printError("HEAD file is corrupt");
+                } catch (IndexFileCorruptException e) {
+                    printError("Index file is corrupt");
+                } catch (RepositoryCorruptException e) {
+                    printError("Repository is corrupt");
+                }
                 break;
             }
             case "help": {

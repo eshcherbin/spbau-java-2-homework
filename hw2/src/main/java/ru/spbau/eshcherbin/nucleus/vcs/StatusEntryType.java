@@ -6,4 +6,5 @@ public enum StatusEntryType {
     MODIFIED,
     UNSTAGED,
     UNTRACKED,
+    MISSING,
 }

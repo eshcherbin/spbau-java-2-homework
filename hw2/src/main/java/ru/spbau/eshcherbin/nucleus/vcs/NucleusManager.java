@@ -758,6 +758,16 @@ public class NucleusManager {
         }
     }
 
+    /**
+     * Returns current repository status, i.e. which files are added, modified, untracked, etc.
+     * @param path a path inside the repository
+     * @return current repository status
+     * @throws IOException if an I/O error occurs
+     * @throws RepositoryNotInitializedException if no repository containing <tt>path</tt> is found
+     * @throws IndexFileCorruptException if the index file's content is corrupt
+     * @throws HeadFileCorruptException if the HEAD file's content is corrupt
+     * @throws RepositoryCorruptException if repository's inner structure is damaged
+     */
     public static RepositoryStatus getRepositoryStatus(@NotNull Path path)
             throws IOException, RepositoryNotInitializedException, HeadFileCorruptException,
             IndexFileCorruptException, RepositoryCorruptException {
@@ -771,7 +781,7 @@ public class NucleusManager {
         } else {
             revision = currentHead;
         }
-        String revisionSha = repository.getRevisionSha(revision);
+        String revisionSha = repository.getRevisionSha(currentHead);
         VcsCommit commit = readCommit(repository, revisionSha);
         VcsTree tree = readTree(repository, commit.getTreeSha());
         Map<Path, String> treeContent = walkVcsTree(tree);
@@ -782,6 +792,9 @@ public class NucleusManager {
                 status.addEntry(fileInIndex, StatusEntryType.ADDED);
             } else if (!treeContent.get(fileInIndex).equals(index.get(fileInIndex))) {
                 status.addEntry(fileInIndex, StatusEntryType.MODIFIED);
+            }
+            if (!Files.exists(repository.getRootDirectory().resolve(fileInIndex))) {
+                status.addEntry(fileInIndex, StatusEntryType.MISSING);
             }
         }
         for (Path fileInTree : treeContent.keySet()) {
