@@ -17,6 +17,9 @@ Command line options:
 - `nucleus checkout <revisionName>` — check out specified revision
 - `nucleus merge <revisionName>` — merge specified revision into current working copy
 - `nucleus log` — print log of commits in current branch
+- `nucleus reset <path>` — reset given file to current revision version
+- `nucleus clean` — remove all untracked files
+- `nucleus status` — print information about changes in current working copy
 - `nucleus help` — print help
 
 Shortcuts:
@@ -24,6 +27,7 @@ Shortcuts:
 - `rm` — `remove` 
 - `ci` — `commit` 
 - `cout` — `checkout` 
+- `st` — `status`
 
 ## Structure
 
