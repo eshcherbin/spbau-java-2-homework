@@ -3,7 +3,6 @@ package ru.spbau.eshcherbin.nucleus.vcs;
 /**
  * Utility class that contains some project-wide constants.
  */
-// I know that package-private access is an unrecommended practice but I don't feel this class should be exposed.
 class Constants {
     /**
      * Length of the subdirectory name in <tt>objects</tt> directory.

@@ -8,16 +8,28 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * Starting of the application. Handles all the command-line interface logic.
+ */
 public class Main {
     private static void printHelp(@Nullable String preMessage) {
         if (preMessage != null) {
             System.out.println(preMessage);
         }
-        System.out.println("usage:" + "\n    nucleus init [<path>]" + "\n    nucleus add <path>"
-                 + "\n    nucleus remove <path>" + "\n    nucleus commit <message>"
-                 + "\n    nucleus branch [delete] <branchName>" + "\n    nucleus checkout <revisionName>"
-                 + "\n    nucleus merge <revisionName>" + "\n    nucleus log" + "\n    nucleus help");
-        System.out.println("shortcuts:" + "\n    rm = remove" + "\n    ci = commit" + "\n    cout = checkout");
+        System.out.println("usage:"
+                + "\n    nucleus init [<path>]"
+                + "\n    nucleus add <path>"
+                + "\n    nucleus remove <path>"
+                + "\n    nucleus commit <message>"
+                + "\n    nucleus branch [delete] <branchName>"
+                + "\n    nucleus checkout <revisionName>"
+                + "\n    nucleus merge <revisionName>"
+                + "\n    nucleus log"
+                + "\n    nucleus help");
+        System.out.println("shortcuts:"
+                + "\n    rm = remove"
+                + "\n    ci = commit"
+                + "\n    cout = checkout");
     }
 
     private static void printHelp() {

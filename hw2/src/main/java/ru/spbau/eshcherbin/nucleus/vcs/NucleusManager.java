@@ -476,8 +476,7 @@ public class NucleusManager {
     public static void addToIndex(@NotNull Path path)
             throws RepositoryNotInitializedException, IOException, IndexFileCorruptException {
         path = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
-        NucleusRepository repository;
-        repository = NucleusRepository.resolveRepository(path, true);
+        NucleusRepository repository = NucleusRepository.resolveRepository(path, true);
         Map<Path, String> addedFiles = new HashMap<>();
         Files.walk(path).forEach(filePath -> {
             filePath = filePath.toAbsolutePath().normalize();

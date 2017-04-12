@@ -9,7 +9,7 @@ public class VcsBlob extends VcsObjectWithName {
     /**
      * Object's content.
      */
-    private byte[] content;
+    private final byte[] content;
 
     public VcsBlob(byte[] content, @NotNull String name) {
         super(name);
