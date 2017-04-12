@@ -406,6 +406,7 @@ public class NucleusManager {
                     addedFiles.put(repository.getRootDirectory().relativize(filePath), addFile(repository, filePath));
                 } catch (IOException e) {
                     // some file was not added
+                    logger.error("File {} was not added to index due to I/O error: {}", filePath, e.getMessage());
                 }
             }
         });
@@ -654,8 +655,8 @@ public class NucleusManager {
             revision = currentHead;
         }
         String revisionSha = repository.getRevisionSha(currentHead);
-        VcsCommit commit = readCommit(repository, revisionSha);
-        VcsTree tree = readTree(repository, commit.getTreeSha());
+        VcsCommit commit = VcsCommit.readCommit(repository, revisionSha);
+        VcsTree tree = VcsTree.readTree(repository, commit.getTreeSha());
         Map<Path, String> treeContent = walkVcsTree(tree);
         Map<Path, String> index = readIndexFile(repository);
         RepositoryStatus status = new RepositoryStatus(revision);
