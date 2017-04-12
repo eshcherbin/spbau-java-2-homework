@@ -2,6 +2,7 @@ package ru.spbau.eshcherbin.nucleus.vcs;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import ru.spbau.eshcherbin.nucleus.vcs.objects.VcsCommit;
 
 import java.text.DateFormat;
 import java.util.Date;

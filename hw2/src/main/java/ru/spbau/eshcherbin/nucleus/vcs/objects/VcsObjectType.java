@@ -1,4 +1,4 @@
-package ru.spbau.eshcherbin.nucleus.vcs;
+package ru.spbau.eshcherbin.nucleus.vcs.objects;
 
 /**
  * Type of a VCS object.
