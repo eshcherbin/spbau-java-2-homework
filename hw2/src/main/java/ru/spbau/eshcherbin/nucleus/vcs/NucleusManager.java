@@ -147,19 +147,6 @@ public class NucleusManager {
     }
 
     /**
-     * Reads a tree from a file.
-     * @param repository the operated repository
-     * @param treeSha the tree's sha
-     * @return the tree
-     * @throws RepositoryCorruptException if repository's inner structure is damaged
-     * @throws IOException if an I/O error occurs
-     */
-    private static @NotNull VcsTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha)
-            throws RepositoryCorruptException, IOException {
-        return VcsTree.readTree(repository, treeSha, "");
-    }
-
-    /**
      * Traverse the given tree and collects all files as a map from file's path to its sha.
      * @param tree the tree to be traversed
      * @return a map from file's path to its sha
@@ -236,7 +223,7 @@ public class NucleusManager {
         Set<Path> removedFiles;
         if (removeCurrent) {
             VcsCommit currentRevision = VcsCommit.readCommit(repository, currentRevisionSha);
-            VcsTree currentTree = readTree(repository, currentRevision.getTreeSha());
+            VcsTree currentTree = VcsTree.readTree(repository, currentRevision.getTreeSha());
             removedFiles = walkVcsTree(currentTree).keySet();
             for (Path removedFile : removedFiles) {
                 Files.delete(repository.getRootDirectory().resolve(removedFile));
@@ -245,7 +232,7 @@ public class NucleusManager {
             removedFiles = Collections.emptySet();
         }
         VcsCommit deployedRevision = VcsCommit.readCommit(repository, deployedRevisionSha);
-        VcsTree deployedTree = readTree(repository, deployedRevision.getTreeSha());
+        VcsTree deployedTree = VcsTree.readTree(repository, deployedRevision.getTreeSha());
         Map<Path, String> addedFiles = walkVcsTree(deployedTree);
         for (Map.Entry<Path, String> entry : addedFiles.entrySet()) {
             Path addedFile = entry.getKey();

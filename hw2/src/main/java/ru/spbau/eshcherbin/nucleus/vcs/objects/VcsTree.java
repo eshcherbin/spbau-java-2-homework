@@ -31,8 +31,8 @@ public class VcsTree extends VcsObjectWithName {
      * @throws RepositoryCorruptException if repository's inner structure is damaged
      * @throws IOException if an I/O error occurs
      */
-    public static @NotNull VcsTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha,
-                                               @NotNull String treeName)
+    private static @NotNull VcsTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha,
+                                             @NotNull String treeName)
             throws RepositoryCorruptException, IOException {
         if (!repository.isValidSha(treeSha)) {
             throw new RepositoryCorruptException();
@@ -73,6 +73,19 @@ public class VcsTree extends VcsObjectWithName {
         // TreeSet to ensure sorted order
         children = new TreeSet<>();
         this.name = name;
+    }
+
+    /**
+     * Reads a tree from a file.
+     * @param repository the operated repository
+     * @param treeSha the tree's sha
+     * @return the tree
+     * @throws RepositoryCorruptException if repository's inner structure is damaged
+     * @throws IOException if an I/O error occurs
+     */
+    public static @NotNull VcsTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha)
+            throws RepositoryCorruptException, IOException {
+        return readTree(repository, treeSha, "");
     }
 
     /**
