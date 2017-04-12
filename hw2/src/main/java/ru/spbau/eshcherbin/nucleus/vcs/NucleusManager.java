@@ -129,63 +129,6 @@ public class NucleusManager {
     }
 
     /**
-     * Reads a commit from a file.
-     * @param repository the operated repository
-     * @param commitSha the commit's sha
-     * @return the commit
-     * @throws RepositoryCorruptException if repository's inner structure is damaged
-     * @throws IOException if an I/O error occurs
-     */
-    private static @NotNull VcsCommit readCommit(@NotNull NucleusRepository repository, @NotNull String commitSha)
-            throws RepositoryCorruptException, IOException {
-        if (!repository.isValidSha(commitSha)) {
-            throw new RepositoryCorruptException();
-        }
-        List<String> commitLines = Files.readAllLines(repository.getObject(commitSha));
-        if (commitLines.size() < 4) {
-            throw new RepositoryCorruptException();
-        }
-        String treeSha = commitLines.get(0);
-        if (!repository.isValidSha(treeSha)) {
-            throw new RepositoryCorruptException();
-        }
-        String author = commitLines.get(1);
-        String timeInMillisecondsString = commitLines.get(2);
-        long timeInMilliseconds;
-        try {
-             timeInMilliseconds = Long.parseLong(timeInMillisecondsString);
-        } catch (NumberFormatException e) {
-            throw new RepositoryCorruptException();
-        }
-        int messageStartLineIndex = 3;
-        while (messageStartLineIndex < commitLines.size() &&
-                !commitLines.get(messageStartLineIndex).startsWith(Constants.MESSAGE_COMMIT_PREFIX)) {
-            ++messageStartLineIndex;
-        }
-        if (messageStartLineIndex == commitLines.size()) {
-            throw new RepositoryCorruptException();
-        }
-        StringBuilder messageBuilder = new StringBuilder(commitLines.get(messageStartLineIndex)
-                .substring(Constants.MESSAGE_COMMIT_PREFIX.length()));
-        for (int i = messageStartLineIndex + 1; i < commitLines.size(); ++i) {
-            messageBuilder.append('\n');
-            messageBuilder.append(commitLines.get(i));
-        }
-        String message = messageBuilder.toString();
-        VcsCommit commit = new VcsCommit(treeSha, message, author, timeInMilliseconds);
-        Set<String> parentShaSet = commit.getParents();
-        for (int i = 3; i < messageStartLineIndex; ++i) {
-            String line = commitLines.get(i);
-            if (!line.startsWith(Constants.PARENT_COMMIT_PREFIX) ||
-                    !repository.isValidSha(line.substring(Constants.PARENT_COMMIT_PREFIX.length()))) {
-                throw new RepositoryCorruptException();
-            }
-            parentShaSet.add(line.substring(Constants.PARENT_COMMIT_PREFIX.length()));
-        }
-        return commit;
-    }
-
-    /**
      * Reads a tree from a file.
      * @param repository the operated repository
      * @param treeSha the tree's sha
@@ -195,52 +138,7 @@ public class NucleusManager {
      */
     private static @NotNull VcsTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha)
             throws RepositoryCorruptException, IOException {
-        return readTree(repository, treeSha, "");
-    }
-
-    /**
-     * Reads a tree from a file.
-     * @param repository the operated repository
-     * @param treeSha the tree's sha
-     * @param treeName the tree's desired name
-     * @return the tree
-     * @throws RepositoryCorruptException if repository's inner structure is damaged
-     * @throws IOException if an I/O error occurs
-     */
-    private static @NotNull VcsTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha,
-                                             @NotNull String treeName)
-            throws RepositoryCorruptException, IOException {
-        if (!repository.isValidSha(treeSha)) {
-            throw new RepositoryCorruptException();
-        }
-        VcsTree tree = new VcsTree(treeName);
-        Splitter onTabSplitter = Splitter.on('\t').omitEmptyStrings().trimResults();
-        for (String line : Files.readAllLines(repository.getObject(treeSha))) {
-            List<String> splitResults = onTabSplitter.splitToList(line);
-            if (splitResults.size() != 3) {
-                throw new RepositoryCorruptException();
-            }
-            VcsObjectType type;
-            try {
-                type = VcsObjectType.valueOf(splitResults.get(0));
-            } catch (IllegalArgumentException e) {
-                throw new RepositoryCorruptException();
-            }
-            if (!(type == VcsObjectType.BLOB || type == VcsObjectType.TREE)) {
-                throw new RepositoryCorruptException();
-            }
-            String sha = splitResults.get(1);
-            String name = splitResults.get(2);
-            if (type == VcsObjectType.BLOB) {
-                if (!repository.isValidSha(sha)) {
-                    throw new RepositoryCorruptException();
-                }
-                tree.addChild(new VcsObjectWithNameAndKnownSha(name, sha, type));
-            } else {
-                tree.addChild(readTree(repository, sha, treeName));
-            }
-        }
-        return tree;
+        return VcsTree.readTree(repository, treeSha, "");
     }
 
     /**
@@ -319,7 +217,7 @@ public class NucleusManager {
 
         Set<Path> removedFiles;
         if (removeCurrent) {
-            VcsCommit currentRevision = readCommit(repository, currentRevisionSha);
+            VcsCommit currentRevision = VcsCommit.readCommit(repository, currentRevisionSha);
             VcsTree currentTree = readTree(repository, currentRevision.getTreeSha());
             removedFiles = walkVcsTree(currentTree).keySet();
             for (Path removedFile : removedFiles) {
@@ -328,7 +226,7 @@ public class NucleusManager {
         } else {
             removedFiles = Collections.emptySet();
         }
-        VcsCommit deployedRevision = readCommit(repository, deployedRevisionSha);
+        VcsCommit deployedRevision = VcsCommit.readCommit(repository, deployedRevisionSha);
         VcsTree deployedTree = readTree(repository, deployedRevision.getTreeSha());
         Map<Path, String> addedFiles = walkVcsTree(deployedTree);
         for (Map.Entry<Path, String> entry : addedFiles.entrySet()) {
@@ -422,7 +320,7 @@ public class NucleusManager {
         } else {
             startCommitSha = revisionName;
         }
-        VcsCommit headCommit = readCommit(repository, startCommitSha);
+        VcsCommit headCommit = VcsCommit.readCommit(repository, startCommitSha);
         // breadth-first commit graph traversal
         Set<String> presentShaSet = new HashSet<>();
         presentShaSet.add(startCommitSha);
@@ -435,7 +333,7 @@ public class NucleusManager {
             for (String parentSha : commit.getParents()) {
                 if (!presentShaSet.contains(parentSha)) {
                     presentShaSet.add(parentSha);
-                    queue.add(readCommit(repository, parentSha));
+                    queue.add(VcsCommit.readCommit(repository, parentSha));
                 }
             }
         }
