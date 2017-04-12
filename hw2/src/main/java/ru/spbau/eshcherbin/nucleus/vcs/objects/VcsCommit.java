@@ -1,6 +1,9 @@
-package ru.spbau.eshcherbin.nucleus.vcs;
+package ru.spbau.eshcherbin.nucleus.vcs.objects;
 
 import org.jetbrains.annotations.NotNull;
+import ru.spbau.eshcherbin.nucleus.vcs.Constants;
+import ru.spbau.eshcherbin.nucleus.vcs.NucleusRepository;
+import ru.spbau.eshcherbin.nucleus.vcs.RepositoryCorruptException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -46,7 +49,7 @@ public class VcsCommit extends VcsObject {
      * @throws RepositoryCorruptException if repository's inner structure is damaged
      * @throws IOException if an I/O error occurs
      */
-    protected static @NotNull VcsCommit readCommit(@NotNull NucleusRepository repository, @NotNull String commitSha)
+    public static @NotNull VcsCommit readCommit(@NotNull NucleusRepository repository, @NotNull String commitSha)
             throws RepositoryCorruptException, IOException {
         if (!repository.isValidSha(commitSha)) {
             throw new RepositoryCorruptException();

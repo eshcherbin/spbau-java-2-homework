@@ -3,6 +3,7 @@ package ru.spbau.eshcherbin.nucleus.vcs;
 import com.google.common.base.Splitter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import ru.spbau.eshcherbin.nucleus.vcs.objects.*;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -159,7 +160,7 @@ public class NucleusManager {
      * @param filesMap the map to store the result
      */
     private static void walkVcsTree(@NotNull VcsTree tree, @NotNull Path path, @NotNull Map<Path, String> filesMap) {
-        for (VcsObjectWithName object : tree.children) {
+        for (VcsObjectWithName object : tree.getChildren()) {
             if (object.getType() == VcsObjectType.BLOB) {
                 filesMap.put(path.resolve(object.getName()), object.getSha());
             } else {

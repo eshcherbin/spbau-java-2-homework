@@ -1,7 +1,9 @@
-package ru.spbau.eshcherbin.nucleus.vcs;
+package ru.spbau.eshcherbin.nucleus.vcs.objects;
 
 import com.google.common.base.Splitter;
 import org.jetbrains.annotations.NotNull;
+import ru.spbau.eshcherbin.nucleus.vcs.NucleusRepository;
+import ru.spbau.eshcherbin.nucleus.vcs.RepositoryCorruptException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,10 +16,11 @@ import java.util.stream.Collectors;
  * A node of a VCS tree.
  */
 public class VcsTree extends VcsObjectWithName {
+
     /**
      * Children of this node.
      */
-    protected @NotNull Set<VcsObjectWithName> children;
+    private @NotNull Set<VcsObjectWithName> children;
 
     /**
      * Reads a tree from a file.
@@ -28,8 +31,8 @@ public class VcsTree extends VcsObjectWithName {
      * @throws RepositoryCorruptException if repository's inner structure is damaged
      * @throws IOException if an I/O error occurs
      */
-    protected static @NotNull VcsTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha,
-                                     @NotNull String treeName)
+    public static @NotNull VcsTree readTree(@NotNull NucleusRepository repository, @NotNull String treeSha,
+                                               @NotNull String treeName)
             throws RepositoryCorruptException, IOException {
         if (!repository.isValidSha(treeSha)) {
             throw new RepositoryCorruptException();
@@ -90,6 +93,10 @@ public class VcsTree extends VcsObjectWithName {
      */
     public void addChild(@NotNull VcsObjectWithName object) {
         children.add(object);
+    }
+
+    public @NotNull Set<VcsObjectWithName> getChildren() {
+        return children;
     }
 
     /**

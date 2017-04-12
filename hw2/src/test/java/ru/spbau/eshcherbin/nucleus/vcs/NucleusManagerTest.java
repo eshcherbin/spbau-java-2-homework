@@ -8,6 +8,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import ru.spbau.eshcherbin.nucleus.vcs.objects.VcsObjectType;
+import ru.spbau.eshcherbin.nucleus.vcs.objects.VcsObjectWithName;
+import ru.spbau.eshcherbin.nucleus.vcs.objects.VcsObjectWithNameAndKnownSha;
+import ru.spbau.eshcherbin.nucleus.vcs.objects.VcsTree;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -152,8 +156,8 @@ public class NucleusManagerTest {
         assertThat(repository.isValidSha(treeSha), is(true));
         VcsTree tree = readTree(repository, treeSha);
 
-        assertThat(tree.children.size(), is(1));
-        VcsObjectWithName vcsObjectWithName = tree.children.stream().findAny().orElseThrow(Exception::new);
+        assertThat(tree.getChildren().size(), is(1));
+        VcsObjectWithName vcsObjectWithName = tree.getChildren().stream().findAny().orElseThrow(Exception::new);
         assertThat(vcsObjectWithName.getType(), is(VcsObjectType.BLOB));
         assertThat(vcsObjectWithName.getName(), is(file.getFileName().toString()));
         assertThat(repository.isValidSha(vcsObjectWithName.getSha()), is(true));

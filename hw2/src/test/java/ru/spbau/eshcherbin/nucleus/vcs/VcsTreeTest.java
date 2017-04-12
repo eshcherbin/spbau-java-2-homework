@@ -1,6 +1,8 @@
 package ru.spbau.eshcherbin.nucleus.vcs;
 
 import org.junit.Test;
+import ru.spbau.eshcherbin.nucleus.vcs.objects.VcsBlob;
+import ru.spbau.eshcherbin.nucleus.vcs.objects.VcsTree;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
