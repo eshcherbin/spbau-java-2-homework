@@ -9,4 +9,5 @@ os:
   - linux
 env:
   - PROJECT_DIR=hw1
+  - PROJECT_DIR=hw4
 script: cd $PROJECT_DIR && ./gradlew check
