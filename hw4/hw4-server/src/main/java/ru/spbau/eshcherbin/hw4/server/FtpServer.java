@@ -33,6 +33,7 @@ public class FtpServer implements Server {
     public void start() throws IOException {
         isRunning = true;
         serverThread.start();
+        logger.info("Server started");
     }
 
     /**
@@ -46,6 +47,7 @@ public class FtpServer implements Server {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        logger.info("Server stopped");
     }
 
     private class FtpServerConnectionAccepter implements Runnable {
@@ -77,7 +79,7 @@ public class FtpServer implements Server {
                         } else if (selectionKey.isReadable()) {
                             handleIncoming(selectionKey);
                         } else if (selectionKey.isWritable()) {
-                            handleOutcoming(selectionKey);
+                            handleOutgoing(selectionKey);
                         }
                         keyIterator.remove();
                     }
@@ -89,8 +91,8 @@ public class FtpServer implements Server {
             }
         }
 
-        private void handleOutcoming(@NotNull SelectionKey selectionKey) {
-            //TODO: handle outcoming
+        private void handleOutgoing(@NotNull SelectionKey selectionKey) {
+            //TODO: handle outgoing
             throw new NotImplementedException();
         }
 
@@ -98,7 +100,7 @@ public class FtpServer implements Server {
             //TODO: handle incoming
             throw new NotImplementedException();
         }
-
+        
         private void handleAccept(@NotNull SelectionKey selectionKey) throws IOException {
             ServerSocketChannel serverChannel = (ServerSocketChannel) selectionKey.channel();
             SocketChannel socketChannel = serverChannel.accept();

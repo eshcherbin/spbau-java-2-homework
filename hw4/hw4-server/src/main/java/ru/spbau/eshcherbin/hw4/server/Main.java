@@ -5,7 +5,14 @@ import ru.spbau.eshcherbin.hw4.Config;
 import java.io.IOException;
 import java.util.Scanner;
 
+/**
+ * Main application class.
+ */
 public class Main {
+    /**
+     * Starts the server application.
+     * @param args command line arguments
+     */
     public static void main(String[] args) {
         Server server = new FtpServer(Config.serverBindingAddress);
         try {
