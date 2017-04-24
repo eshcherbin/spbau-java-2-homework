@@ -20,6 +20,10 @@ public class Message {
         data = new byte[length];
     }
 
+    public Message(@NotNull byte[] data) {
+        this.data = data;
+    }
+
     public @NotNull byte[] getData() {
         return data;
     }
