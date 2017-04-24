@@ -1,17 +1,30 @@
 package ru.spbau.eshcherbin.hw4.server;
 
+import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.spbau.eshcherbin.hw4.ftp.FtpListResponse;
+import ru.spbau.eshcherbin.hw4.ftp.FtpListResponseItem;
+import ru.spbau.eshcherbin.hw4.ftp.FtpQuery;
+import ru.spbau.eshcherbin.hw4.messages.Message;
+import ru.spbau.eshcherbin.hw4.messages.MessageReader;
+import ru.spbau.eshcherbin.hw4.messages.MessageWriter;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Optional;
 
 public class FtpServer implements Server {
     private static final @NotNull Logger logger = LoggerFactory.getLogger(FtpServer.class);
@@ -96,9 +109,36 @@ public class FtpServer implements Server {
             throw new NotImplementedException();
         }
 
-        private void handleIncoming(@NotNull SelectionKey selectionKey) {
-            //TODO: handle incoming
-            throw new NotImplementedException();
+        private void handleIncoming(@NotNull SelectionKey selectionKey) throws IOException {
+            ClientHandlingSuite clientHandlingSuite = (ClientHandlingSuite) selectionKey.attachment();
+            MessageReader messageReader = clientHandlingSuite.getReader();
+            Optional<Message> messageOptional = messageReader.read();
+            if (messageOptional.isPresent()) {
+                Message message = messageOptional.get();
+                FtpQuery query = SerializationUtils.deserialize(message.getData());
+                switch (query.getType()) {
+                    case LIST: {
+                        ArrayList<FtpListResponseItem> responseItems = new ArrayList<>();
+                        Path path = Paths.get(query.getPath());
+                        if (Files.exists(path)) {
+                            File file = path.toRealPath().toFile();
+                            File[] files = file.listFiles();
+                            if (files != null) {
+                                for (File item : files) {
+                                    responseItems.add(new FtpListResponseItem(item.getName(), item.isDirectory()));
+                                }
+                            }
+                        }
+                        MessageWriter writer = clientHandlingSuite.getWriter();
+                        writer.startNewMessage(
+                                new Message(SerializationUtils.serialize(new FtpListResponse(responseItems)))
+                        );
+                        clientHandlingSuite.setStatus(ClientHandlingStatus.SENDING);
+                        break;
+                    }
+                }
+                selectionKey.channel().register(selectionKey.selector(), SelectionKey.OP_WRITE);
+            }
         }
         
         private void handleAccept(@NotNull SelectionKey selectionKey) throws IOException {
@@ -106,7 +146,13 @@ public class FtpServer implements Server {
             SocketChannel socketChannel = serverChannel.accept();
             if (socketChannel != null) {
                 socketChannel.configureBlocking(false);
-                socketChannel.register(selectionKey.selector(), SelectionKey.OP_READ);
+                SelectionKey clientSelectionKey = socketChannel.register(selectionKey.selector(), SelectionKey.OP_READ);
+                clientSelectionKey.attach(
+                        new ClientHandlingSuite(
+                                new MessageReader(socketChannel),
+                                new MessageWriter(socketChannel)
+                        )
+                );
             }
         }
     }

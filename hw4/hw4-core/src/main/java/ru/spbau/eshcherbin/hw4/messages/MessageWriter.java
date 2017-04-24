@@ -25,20 +25,16 @@ public class MessageWriter {
     }
 
     /**
-     * Starts writing a new message to the channel.
-     * The previous message is discarded if present.
+     * Starts writing a new message to the channel. No writing is performed until a <tt>write</tt> call.
      * @param message the message to be written
-     * @return whether the message has been completely written
-     * @throws IOException if an I/O Error occurs
      */
-    public boolean write(@NotNull Message message) throws IOException {
+    public void startNewMessage(@NotNull Message message) {
         lengthBuffer.clear();
         lengthBuffer.putInt(message.data.length);
         lengthBuffer.flip();
         dataBuffer = ByteBuffer.allocate(message.data.length);
         dataBuffer.put(message.data);
         dataBuffer.flip();
-        return write();
     }
 
     /**
