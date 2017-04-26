@@ -10,7 +10,6 @@ import ru.spbau.eshcherbin.hw4.ftp.FtpQuery;
 import ru.spbau.eshcherbin.hw4.messages.Message;
 import ru.spbau.eshcherbin.hw4.messages.MessageReader;
 import ru.spbau.eshcherbin.hw4.messages.MessageWriter;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.File;
 import java.io.IOException;
@@ -104,11 +103,29 @@ public class FtpServer implements Server {
             }
         }
 
-        private void handleOutgoing(@NotNull SelectionKey selectionKey) {
-            //TODO: handle outgoing
-            throw new NotImplementedException();
+        /**
+         * Does the necessary work with a channel ready for writing.
+         * @param selectionKey the channel's selection key
+         * @throws IOException if an I/O error occurs
+         */
+        private void handleOutgoing(@NotNull SelectionKey selectionKey) throws IOException {
+            ClientHandlingSuite clientHandlingSuite = (ClientHandlingSuite) selectionKey.attachment();
+            switch (clientHandlingSuite.getStatus()) {
+                case SENDING: {
+                    MessageWriter messageWriter = clientHandlingSuite.getWriter();
+                    if (messageWriter.write()) {
+                        clientHandlingSuite.setStatus(ClientHandlingStatus.RECEIVING);
+                        selectionKey.channel().register(selectionKey.selector(), SelectionKey.OP_READ);
+                    }
+                }
+            }
         }
 
+        /**
+         * Does the necessary work with a channel ready for reading.
+         * @param selectionKey the channel's selection key
+         * @throws IOException if an I/O error occurs
+         */
         private void handleIncoming(@NotNull SelectionKey selectionKey) throws IOException {
             ClientHandlingSuite clientHandlingSuite = (ClientHandlingSuite) selectionKey.attachment();
             MessageReader messageReader = clientHandlingSuite.getReader();
@@ -140,7 +157,13 @@ public class FtpServer implements Server {
                 selectionKey.channel().register(selectionKey.selector(), SelectionKey.OP_WRITE);
             }
         }
-        
+
+
+        /**
+         * Does the necessary work with a channel ready for accepting.
+         * @param selectionKey the channel's selection key
+         * @throws IOException if an I/O error occurs
+         */
         private void handleAccept(@NotNull SelectionKey selectionKey) throws IOException {
             ServerSocketChannel serverChannel = (ServerSocketChannel) selectionKey.channel();
             SocketChannel socketChannel = serverChannel.accept();
