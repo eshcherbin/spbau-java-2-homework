@@ -114,6 +114,7 @@ public class FtpServer implements Server {
                 case SENDING: {
                     MessageWriter messageWriter = clientHandlingSuite.getWriter();
                     if (messageWriter.write()) {
+                        logger.info("Response sent to {}", ((SocketChannel) selectionKey.channel()).getRemoteAddress());
                         clientHandlingSuite.setStatus(ClientHandlingStatus.RECEIVING);
                         selectionKey.channel().register(selectionKey.selector(), SelectionKey.OP_READ);
                     }
@@ -135,6 +136,8 @@ public class FtpServer implements Server {
                 FtpQuery query = SerializationUtils.deserialize(message.getData());
                 switch (query.getType()) {
                     case LIST: {
+                        logger.info("List query received from {}",
+                                ((SocketChannel) selectionKey.channel()).getRemoteAddress());
                         ArrayList<FtpListResponseItem> responseItems = new ArrayList<>();
                         Path path = Paths.get(query.getPath());
                         if (Files.exists(path)) {
