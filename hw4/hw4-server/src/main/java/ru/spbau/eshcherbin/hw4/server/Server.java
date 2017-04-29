@@ -1,9 +1,6 @@
 package ru.spbau.eshcherbin.hw4.server;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.io.IOException;
-import java.net.SocketAddress;
 
 /**
  * Interface of a server.

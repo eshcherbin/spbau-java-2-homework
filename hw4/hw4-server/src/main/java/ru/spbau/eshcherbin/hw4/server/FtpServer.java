@@ -25,6 +25,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Optional;
 
+/**
+ * The FTP server.
+ */
 public class FtpServer implements Server {
     private static final @NotNull Logger logger = LoggerFactory.getLogger(FtpServer.class);
     private @NotNull Thread serverThread;
@@ -54,6 +57,7 @@ public class FtpServer implements Server {
     @Override
     public void stop() {
         isRunning = false;
+        serverThread.interrupt();
         try {
             serverThread.join();
         } catch (InterruptedException e) {
@@ -63,7 +67,6 @@ public class FtpServer implements Server {
     }
 
     private class FtpServerConnectionAccepter implements Runnable {
-        private static final long SELECT_TIMEOUT = 500;
         private @NotNull SocketAddress bindingAddress;
         
         public FtpServerConnectionAccepter(@NotNull SocketAddress bindingAddress) {
@@ -82,16 +85,25 @@ public class FtpServer implements Server {
                 serverChannel.register(selector, SelectionKey.OP_ACCEPT);
                 
                 while (isRunning) {
-                    selector.select(SELECT_TIMEOUT);
+                    selector.select();
                     Iterator<SelectionKey> keyIterator = selector.selectedKeys().iterator();
                     while (keyIterator.hasNext()) {
                         SelectionKey selectionKey = keyIterator.next();
                         if (selectionKey.isAcceptable()) {
                             handleAccept(selectionKey);
-                        } else if (selectionKey.isReadable()) {
-                            handleIncoming(selectionKey);
-                        } else if (selectionKey.isWritable()) {
-                            handleOutgoing(selectionKey);
+                        } else {
+                            if (!selectionKey.isValid()) {
+                                SocketChannel channel = (SocketChannel) selectionKey.channel();
+                                SocketAddress clientAddress = channel.getRemoteAddress();
+                                channel.close();
+                                logger.info("Client from {} disconnected", clientAddress);
+                                continue;
+                            }
+                            if (selectionKey.isReadable()) {
+                                handleIncoming(selectionKey);
+                            } else if (selectionKey.isWritable()) {
+                                handleOutgoing(selectionKey);
+                            }
                         }
                         keyIterator.remove();
                     }
@@ -109,14 +121,25 @@ public class FtpServer implements Server {
          * @throws IOException if an I/O error occurs
          */
         private void handleOutgoing(@NotNull SelectionKey selectionKey) throws IOException {
+            SocketChannel clientChannel = (SocketChannel) selectionKey.channel();
             ClientHandlingSuite clientHandlingSuite = (ClientHandlingSuite) selectionKey.attachment();
             switch (clientHandlingSuite.getStatus()) {
                 case SENDING: {
                     MessageWriter messageWriter = clientHandlingSuite.getWriter();
-                    if (messageWriter.write()) {
-                        logger.info("Response sent to {}", ((SocketChannel) selectionKey.channel()).getRemoteAddress());
-                        clientHandlingSuite.setStatus(ClientHandlingStatus.RECEIVING);
-                        selectionKey.channel().register(selectionKey.selector(), SelectionKey.OP_READ);
+                    try {
+                        if (messageWriter.write()) {
+                            logger.info("Response sent to {}", ((SocketChannel) selectionKey.channel()).getRemoteAddress());
+                            clientHandlingSuite.setStatus(ClientHandlingStatus.RECEIVING);
+                            selectionKey.channel().register(
+                                    selectionKey.selector(),
+                                    SelectionKey.OP_READ,
+                                    clientHandlingSuite
+                            );
+                        }
+                    } catch (IOException e) {
+                        SocketAddress address = clientChannel.getRemoteAddress();
+                        clientChannel.close();
+                        logger.info("Client from {} disconnected", address);
                     }
                 }
             }
@@ -128,6 +151,7 @@ public class FtpServer implements Server {
          * @throws IOException if an I/O error occurs
          */
         private void handleIncoming(@NotNull SelectionKey selectionKey) throws IOException {
+            SocketChannel clientChannel = (SocketChannel) selectionKey.channel(); 
             ClientHandlingSuite clientHandlingSuite = (ClientHandlingSuite) selectionKey.attachment();
             MessageReader messageReader = clientHandlingSuite.getReader();
             Optional<Message> messageOptional = messageReader.read();
@@ -137,7 +161,7 @@ public class FtpServer implements Server {
                 switch (query.getType()) {
                     case LIST: {
                         logger.info("List query received from {}",
-                                ((SocketChannel) selectionKey.channel()).getRemoteAddress());
+                                clientChannel.getRemoteAddress());
                         ArrayList<FtpListResponseItem> responseItems = new ArrayList<>();
                         Path path = Paths.get(query.getPath());
                         if (Files.exists(path)) {
@@ -157,7 +181,11 @@ public class FtpServer implements Server {
                         break;
                     }
                 }
-                selectionKey.channel().register(selectionKey.selector(), SelectionKey.OP_WRITE);
+                selectionKey.channel().register(selectionKey.selector(), SelectionKey.OP_WRITE, clientHandlingSuite);
+            } else if (messageReader.isClientDisconnected()) {
+                SocketAddress address = clientChannel.getRemoteAddress();
+                clientChannel.close();
+                logger.info("Client from {} disconnected", address);
             }
         }
 
@@ -171,6 +199,7 @@ public class FtpServer implements Server {
             ServerSocketChannel serverChannel = (ServerSocketChannel) selectionKey.channel();
             SocketChannel socketChannel = serverChannel.accept();
             if (socketChannel != null) {
+                logger.info("Accepted new client from {}", socketChannel.getRemoteAddress());
                 socketChannel.configureBlocking(false);
                 SelectionKey clientSelectionKey = socketChannel.register(selectionKey.selector(), SelectionKey.OP_READ);
                 clientSelectionKey.attach(

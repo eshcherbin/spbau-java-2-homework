@@ -16,14 +16,26 @@ public class Message {
      */
     protected final @NotNull byte[] data;
 
+    /**
+     * Creates an empty message of given length.
+     * @param length length of the message
+     */
     public Message(int length) {
         data = new byte[length];
     }
 
+    /**
+     * Creates a message with given content.
+     * @param data the content of the message
+     */
     public Message(@NotNull byte[] data) {
         this.data = data;
     }
 
+    /**
+     * Returns the content of the message.
+     * @return the content of the message
+     */
     public @NotNull byte[] getData() {
         return data;
     }

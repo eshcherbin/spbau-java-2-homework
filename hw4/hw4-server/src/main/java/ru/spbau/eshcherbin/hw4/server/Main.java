@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.Scanner;
 
 /**
- * Main application class.
+ * Main server application class.
  */
 public class Main {
     /**

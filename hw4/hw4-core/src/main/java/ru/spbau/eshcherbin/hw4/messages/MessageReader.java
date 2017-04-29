@@ -16,6 +16,7 @@ public class MessageReader {
     private @NotNull ByteBuffer lengthBuffer = ByteBuffer.allocate(Message.LENGTH_BYTES);
     private @Nullable ByteBuffer dataBuffer;
     private @NotNull ReadableByteChannel channel;
+    private boolean clientDisconnected = false;
 
     /**
      * Constructs a message reader for a specific channel.
@@ -34,7 +35,11 @@ public class MessageReader {
      */
     public @NotNull Optional<Message> read() throws IOException {
         if (lengthBuffer.hasRemaining()) {
-            channel.read(lengthBuffer);
+            if (channel.read(lengthBuffer) == -1) {
+                reset();
+                clientDisconnected = true;
+                return Optional.empty();
+            }
             if (lengthBuffer.hasRemaining()) {
                 return Optional.empty();
             }
@@ -45,13 +50,27 @@ public class MessageReader {
         if (dataBuffer == null) { // should not happen
             return Optional.empty();
         }
-        channel.read(dataBuffer);
+        if (channel.read(dataBuffer) == -1) {
+            reset();
+            clientDisconnected = true;
+            return Optional.empty();
+        }
         if (dataBuffer.hasRemaining()) {
             return Optional.empty();
         }
         Message result = new Message(length);
         dataBuffer.flip();
         dataBuffer.get(result.data);
+        reset();
         return Optional.of(result);
+    }
+
+    public boolean isClientDisconnected() {
+        return clientDisconnected;
+    }
+
+    private void reset() {
+        lengthBuffer.clear();
+        dataBuffer = null;
     }
 }
