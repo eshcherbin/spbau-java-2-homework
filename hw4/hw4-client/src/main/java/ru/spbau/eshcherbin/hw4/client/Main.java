@@ -7,6 +7,8 @@ import ru.spbau.eshcherbin.hw4.ftp.FtpListResponseItem;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Scanner;
 
 /**
@@ -39,7 +41,7 @@ public class Main {
             System.out.print("> ");
             String command = scanner.nextLine();
             switch (command) {
-                case "list":
+                case "list": {
                     System.out.print("Enter path: ");
                     String path = scanner.nextLine();
                     try {
@@ -51,6 +53,21 @@ public class Main {
                         e.printStackTrace();
                     }
                     break;
+                }
+                case "get": {
+                    System.out.print("Enter path: ");
+                    String path = scanner.nextLine();
+                    System.out.print("Enter path to save the file to: ");
+                    String savePathString = scanner.nextLine();
+                    Path savePath = Paths.get(savePathString);
+                    try {
+                        client.executeGet(path, savePath);
+                    } catch (ClientNotConnectedException | IOException e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println("File received");
+                    break;
+                }
                 case "exit":
                     isRunning = false;
                     break;

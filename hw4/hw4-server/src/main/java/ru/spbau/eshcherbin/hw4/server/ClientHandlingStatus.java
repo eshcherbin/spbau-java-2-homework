@@ -9,7 +9,11 @@ enum ClientHandlingStatus {
      */
     RECEIVING,
     /**
-     * Sending a response.
+     * Sending a list response.
      */
-    SENDING,
+    SENDING_LIST,
+    /**
+     * Sending a get response.
+     */
+    SENDING_GET,
 }

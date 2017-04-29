@@ -8,4 +8,8 @@ public enum FtpQueryType {
      * List query.
      */
     LIST,
+    /**
+     * Get query
+     */
+    GET,
 }

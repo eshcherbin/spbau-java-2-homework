@@ -4,6 +4,7 @@ import org.apache.commons.lang3.SerializationUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.spbau.eshcherbin.hw4.ftp.FtpGetResponse;
 import ru.spbau.eshcherbin.hw4.ftp.FtpListResponse;
 import ru.spbau.eshcherbin.hw4.ftp.FtpListResponseItem;
 import ru.spbau.eshcherbin.hw4.ftp.FtpQuery;
@@ -14,13 +15,11 @@ import ru.spbau.eshcherbin.hw4.messages.MessageWriter;
 import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Optional;
@@ -38,7 +37,7 @@ public class FtpServer implements Server {
      * @param bindingAddress the address to which this server is bound.
      */
     public FtpServer(@NotNull SocketAddress bindingAddress) {
-        serverThread = new Thread(new FtpServerConnectionAccepter(bindingAddress));
+        serverThread = new Thread(new FtpServerConnectionHandler(bindingAddress));
     }
 
     /**
@@ -66,10 +65,11 @@ public class FtpServer implements Server {
         logger.info("Server stopped");
     }
 
-    private class FtpServerConnectionAccepter implements Runnable {
+    private class FtpServerConnectionHandler implements Runnable {
+        private static final int MAX_FILE_TRANSMIT_UNIT = 1024 * 1024;
         private @NotNull SocketAddress bindingAddress;
         
-        public FtpServerConnectionAccepter(@NotNull SocketAddress bindingAddress) {
+        public FtpServerConnectionHandler(@NotNull SocketAddress bindingAddress) {
             this.bindingAddress = bindingAddress;
         }
 
@@ -123,12 +123,12 @@ public class FtpServer implements Server {
         private void handleOutgoing(@NotNull SelectionKey selectionKey) throws IOException {
             SocketChannel clientChannel = (SocketChannel) selectionKey.channel();
             ClientHandlingSuite clientHandlingSuite = (ClientHandlingSuite) selectionKey.attachment();
-            switch (clientHandlingSuite.getStatus()) {
-                case SENDING: {
-                    MessageWriter messageWriter = clientHandlingSuite.getWriter();
-                    try {
+            try {
+                MessageWriter messageWriter = clientHandlingSuite.getWriter();
+                switch (clientHandlingSuite.getStatus()) {
+                    case SENDING_LIST:
                         if (messageWriter.write()) {
-                            logger.info("Response sent to {}", ((SocketChannel) selectionKey.channel()).getRemoteAddress());
+                            logger.info("List response sent to {}", clientChannel.getRemoteAddress());
                             clientHandlingSuite.setStatus(ClientHandlingStatus.RECEIVING);
                             selectionKey.channel().register(
                                     selectionKey.selector(),
@@ -136,12 +136,46 @@ public class FtpServer implements Server {
                                     clientHandlingSuite
                             );
                         }
-                    } catch (IOException e) {
-                        SocketAddress address = clientChannel.getRemoteAddress();
-                        clientChannel.close();
-                        logger.info("Client from {} disconnected", address);
+                        break;
+                    case SENDING_GET:
+                        if (messageWriter.write()) {
+                            FileChannel fileChannel = clientHandlingSuite.getFileChannel();
+                            if (fileChannel != null) {
+                                long bytesSent = fileChannel.transferTo(fileChannel.position(),
+                                        MAX_FILE_TRANSMIT_UNIT, clientChannel);
+                                fileChannel.position(fileChannel.position() + bytesSent);
+                            }
+                            if (fileChannel == null || fileChannel.position() == fileChannel.size()) {
+                                if (fileChannel != null) {
+                                    try {
+                                        fileChannel.close();
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                                logger.info("Get response sent to {}", clientChannel.getRemoteAddress());
+                                clientHandlingSuite.setStatus(ClientHandlingStatus.RECEIVING);
+                                selectionKey.channel().register(
+                                        selectionKey.selector(),
+                                        SelectionKey.OP_READ,
+                                        clientHandlingSuite
+                                );
+                            }
+                        }
+                        break;
+                }
+            } catch (IOException e) {
+                SocketAddress address = clientChannel.getRemoteAddress();
+                FileChannel fileChannel = clientHandlingSuite.getFileChannel();
+                if (fileChannel != null && !fileChannel.isOpen()) {
+                    try {
+                        fileChannel.close();
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
                     }
                 }
+                clientChannel.close();
+                logger.info("Client from {} disconnected", address);
             }
         }
 
@@ -151,19 +185,19 @@ public class FtpServer implements Server {
          * @throws IOException if an I/O error occurs
          */
         private void handleIncoming(@NotNull SelectionKey selectionKey) throws IOException {
-            SocketChannel clientChannel = (SocketChannel) selectionKey.channel(); 
+            SocketChannel clientChannel = (SocketChannel) selectionKey.channel();
             ClientHandlingSuite clientHandlingSuite = (ClientHandlingSuite) selectionKey.attachment();
             MessageReader messageReader = clientHandlingSuite.getReader();
             Optional<Message> messageOptional = messageReader.read();
             if (messageOptional.isPresent()) {
                 Message message = messageOptional.get();
                 FtpQuery query = SerializationUtils.deserialize(message.getData());
+                Path path = Paths.get(query.getPath());
                 switch (query.getType()) {
                     case LIST: {
                         logger.info("List query received from {}",
                                 clientChannel.getRemoteAddress());
                         ArrayList<FtpListResponseItem> responseItems = new ArrayList<>();
-                        Path path = Paths.get(query.getPath());
                         if (Files.exists(path)) {
                             File file = path.toRealPath().toFile();
                             File[] files = file.listFiles();
@@ -177,7 +211,19 @@ public class FtpServer implements Server {
                         writer.startNewMessage(
                                 new Message(SerializationUtils.serialize(new FtpListResponse(responseItems)))
                         );
-                        clientHandlingSuite.setStatus(ClientHandlingStatus.SENDING);
+                        clientHandlingSuite.setStatus(ClientHandlingStatus.SENDING_LIST);
+                        break;
+                    }
+                    case GET: {
+                        logger.info("Get query received from {}",
+                                clientChannel.getRemoteAddress());
+                        FileChannel fileChannel = FileChannel.open(path, StandardOpenOption.READ);
+                        clientHandlingSuite.setFileChannel(fileChannel);
+                        MessageWriter writer = clientHandlingSuite.getWriter();
+                        writer.startNewMessage(
+                                new Message(SerializationUtils.serialize(new FtpGetResponse(fileChannel.size())))
+                        );
+                        clientHandlingSuite.setStatus(ClientHandlingStatus.SENDING_GET);
                         break;
                     }
                 }
