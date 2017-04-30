@@ -10,6 +10,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.stage.Stage;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -71,6 +72,7 @@ public class ConnectionController implements Initializable {
             }
             scene.setRoot(newRoot);
             MainController mainController = fxmlLoader.getController();
+            mainController.setStage((Stage) scene.getWindow());
             mainController.connect(serverAddress);
         });
     }

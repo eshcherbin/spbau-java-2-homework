@@ -10,6 +10,8 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -22,6 +24,7 @@ import ru.spbau.eshcherbin.hw4.client.FtpClient;
 import ru.spbau.eshcherbin.hw4.ftp.FtpListResponse;
 import ru.spbau.eshcherbin.hw4.ftp.FtpListResponseItem;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.net.URL;
@@ -39,13 +42,21 @@ public class MainController implements Initializable {
     private @FXML ListView<FtpListResponseItem> listViewDirectoryContent;
     private @FXML Label labelCurrentPath;
     private final @NotNull FtpClient client = new FtpClient();
+    private Stage stage;
     private Image folderIconImage;
     private Image downloadIconImage;
 
     private @NotNull Path currentPath = Paths.get(GuiConfig.ROOT_FOLDER_NAME);
-    private @NotNull Path savePath = Paths.get("");
     private final @NotNull ObservableList<FtpListResponseItem> directoryContentItems =
             FXCollections.observableArrayList();
+
+    /**
+     * Sets the stage for the controller.
+     * @param stage the stage
+     */
+    public void setStage(@NotNull Stage stage) {
+        this.stage = stage;
+    }
 
     /**
      * Connects the client to a server with given address.
@@ -109,7 +120,20 @@ public class MainController implements Initializable {
                 }
                 updateDirectoryContent();
             } else {
-                //TODO: download the file
+                DirectoryChooser directoryChooser = new DirectoryChooser();
+                directoryChooser.setInitialDirectory(Paths.get("").toAbsolutePath().toFile());
+                directoryChooser.setTitle("Choose directory to save " + selectedItem.getFileName());
+                File destinationDirectory = directoryChooser.showDialog(stage);
+                if (destinationDirectory != null) {
+                    try {
+                        client.executeGet(currentPath.resolve(selectedItem.getFileName()).toString(),
+                                destinationDirectory.toPath().resolve(selectedItem.getFileName()));
+                    } catch (ClientNotConnectedException | IOException e) {
+                        logger.error("Disconnected from server");
+                        labelStatus.setText("Disconnected from server");
+                        directoryContentItems.clear();
+                    }
+                }
             }
         });
         listViewDirectoryContent.setItems(directoryContentItems);
@@ -123,13 +147,9 @@ public class MainController implements Initializable {
         FtpListResponse response;
         try {
             response = client.executeList(currentPath.toString());
-        } catch (IOException e) {
+        } catch (ClientNotConnectedException | IOException e) {
             logger.error("Disconnected from server");
             labelStatus.setText("Disconnected from server");
-            return;
-        } catch (ClientNotConnectedException e) {
-            logger.error(fatalMarker, "Client already connected (shouldn't happen)");
-            labelStatus.setText("Already connected");
             return;
         }
         directoryContentItems.clear();
