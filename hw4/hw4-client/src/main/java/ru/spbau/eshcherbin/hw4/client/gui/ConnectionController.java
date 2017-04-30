@@ -28,7 +28,7 @@ import java.util.ResourceBundle;
  * Controller of the connection scene of the application.
  */
 public class ConnectionController implements Initializable {
-    private static final @NotNull Logger logger = LoggerFactory.getLogger(ClientApplication.class);
+    private static final @NotNull Logger logger = LoggerFactory.getLogger(ConnectionController.class);
     private static final @NotNull Marker fatalMarker = MarkerFactory.getMarker("FATAL");
     private static final int MAX_PORT = 65535;
     private static final int MIN_PORT = 1025;

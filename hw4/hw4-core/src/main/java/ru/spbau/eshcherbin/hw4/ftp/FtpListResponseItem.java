@@ -31,4 +31,23 @@ public class FtpListResponseItem implements Serializable {
     public boolean isDirectory() {
         return isDirectory;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        FtpListResponseItem that = (FtpListResponseItem) o;
+        return isDirectory == that.isDirectory && fileName.equals(that.fileName);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = fileName.hashCode();
+        result = 31 * result + (isDirectory ? 1 : 0);
+        return result;
+    }
 }
