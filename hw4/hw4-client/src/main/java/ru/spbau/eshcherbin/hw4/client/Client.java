@@ -21,4 +21,10 @@ public interface Client {
      * @throws IOException if an I/O error occurs
      */
     void disconnect() throws IOException, ClientNotConnectedException;
+
+    /**
+     * Returns whether the client is connected to a server.
+     * @return whether the client is connected to a server
+     */
+    boolean isConnected();
 }

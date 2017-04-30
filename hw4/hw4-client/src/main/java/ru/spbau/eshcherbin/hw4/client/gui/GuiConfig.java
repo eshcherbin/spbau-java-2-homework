@@ -14,7 +14,7 @@ class GuiConfig {
     /**
      * Path to main scene layout file.
      */
-    public static final @NotNull String MAIN_FXML_PATH = "scenes/connection.fxml";
+    public static final @NotNull String MAIN_FXML_PATH = "scenes/main.fxml";
 
     /**
      * Title of the primary stage.

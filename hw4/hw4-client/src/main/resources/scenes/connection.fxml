@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.VBox?>
 <VBox alignment="CENTER" fillWidth="false" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.spbau.eshcherbin.hw4.client.gui.ConnectionController">
+   <Label fx:id="labelPrompt" text="Enter server coordinates" />
    <TextField fx:id="textFieldAddress" promptText="Address" />
    <TextField fx:id="textFieldPort" promptText="Port" />
    <Button fx:id="buttonConnect" mnemonicParsing="false" text="Connect" />

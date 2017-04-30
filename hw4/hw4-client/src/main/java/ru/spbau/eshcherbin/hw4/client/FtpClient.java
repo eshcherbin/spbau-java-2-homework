@@ -37,7 +37,7 @@ public class FtpClient implements Client {
     @Override
     public void connect(@NotNull SocketAddress serverAddress)
             throws IOException, ClientAlreadyConnectedException {
-        if (channel != null && channel.isConnected()) {
+        if (isConnected()) {
             throw new ClientAlreadyConnectedException();
         }
         channel = SocketChannel.open(serverAddress);
@@ -51,12 +51,22 @@ public class FtpClient implements Client {
      */
     @Override
     public void disconnect() throws IOException, ClientNotConnectedException {
-        if (channel == null || !channel.isConnected()) {
+        if (!isConnected()) {
             throw new ClientNotConnectedException();
         }
         SocketAddress remoteAddress = channel.getRemoteAddress();
         channel.close();
         logger.info("Disconnected from {}", remoteAddress);
+    }
+
+    /**
+     * Returns whether the client is connected to a server.
+     *
+     * @return whether the client is connected to a server
+     */
+    @Override
+    public boolean isConnected() {
+        return channel != null && channel.isConnected();
     }
 
     /**
@@ -68,7 +78,7 @@ public class FtpClient implements Client {
      */
     public @NotNull FtpListResponse executeList(@NotNull String path)
             throws IOException, ClientNotConnectedException {
-        if (channel == null || !channel.isConnected()) {
+        if (!isConnected()) {
             throw new ClientNotConnectedException();
         }
         Message queryMessage = new Message(SerializationUtils.serialize(new FtpQuery(FtpQueryType.LIST, path)));
@@ -99,7 +109,7 @@ public class FtpClient implements Client {
      */
     public void executeGet(@NotNull String path, @NotNull Path savePath)
             throws ClientNotConnectedException, IOException {
-        if (channel == null || !channel.isConnected()) {
+        if (!isConnected()) {
             throw new ClientNotConnectedException();
         }
         FileChannel fileChannel = FileChannel.open(savePath,
