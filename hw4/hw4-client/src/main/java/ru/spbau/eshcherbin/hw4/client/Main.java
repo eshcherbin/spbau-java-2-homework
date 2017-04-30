@@ -12,7 +12,7 @@ import java.nio.file.Paths;
 import java.util.Scanner;
 
 /**
- * Main client application class
+ * ClientApplication client application class
  */
 public class Main {
     /**
@@ -25,7 +25,7 @@ public class Main {
             client.connect(
                     new InetSocketAddress(
                             "127.0.0.1",
-                            ((InetSocketAddress) Config.serverBindingAddress).getPort()
+                            Config.serverBindingAddress.getPort()
                     )
             );
         } catch (ConnectException e) {
