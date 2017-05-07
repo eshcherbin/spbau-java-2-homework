@@ -475,4 +475,12 @@ public class NucleusManagerTest {
         assertThat(status.getEntries(),
                 is(ImmutableSet.of(new StatusEntry(temporaryRootPath.relativize(file1), StatusEntryType.MISSING))));
     }
+
+    @Test
+    public void emptyRepositoryStatusTest() throws Exception {
+        repository = NucleusManager.initializeRepository(temporaryRootPath);
+        RepositoryStatus status = NucleusManager.getRepositoryStatus(temporaryRootPath);
+        assertThat(status.getRevision(), is(Constants.DEFAULT_BRANCH_NAME));
+        assertThat(status.getEntries().size(), is(0));
+    }
 }

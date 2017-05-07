@@ -641,7 +641,7 @@ public class NucleusManager {
      * @throws HeadFileCorruptException if the HEAD file's content is corrupt
      * @throws RepositoryCorruptException if repository's inner structure is damaged
      */
-    public static RepositoryStatus getRepositoryStatus(@NotNull Path path)
+    public static @NotNull RepositoryStatus getRepositoryStatus(@NotNull Path path)
             throws IOException, RepositoryNotInitializedException, HeadFileCorruptException,
             IndexFileCorruptException, RepositoryCorruptException {
         logger.debug("Collecting repository status");
@@ -654,12 +654,15 @@ public class NucleusManager {
         } else {
             revision = currentHead;
         }
+        RepositoryStatus status = new RepositoryStatus(revision);
+        if (Files.lines(repository.getHeadFile()).count() == 0) {
+            return status; // repository is empty
+        }
         String revisionSha = repository.getRevisionSha(currentHead);
         VcsCommit commit = VcsCommit.readCommit(repository, revisionSha);
         VcsTree tree = VcsTree.readTree(repository, commit.getTreeSha());
         Map<Path, String> treeContent = walkVcsTree(tree);
         Map<Path, String> index = readIndexFile(repository);
-        RepositoryStatus status = new RepositoryStatus(revision);
         for (Path fileInIndex : index.keySet()) {
             if (!treeContent.containsKey(fileInIndex)) {
                 status.addEntry(fileInIndex, StatusEntryType.ADDED);
