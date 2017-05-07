@@ -4,6 +4,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Path;
 
+/**
+ * An entry in the repository status.
+ * Represents a modification of the file inside the repository.
+ */
 public class StatusEntry {
     private @NotNull Path path;
     private @NotNull StatusEntryType type;
@@ -13,10 +17,18 @@ public class StatusEntry {
         this.type = type;
     }
 
+    /**
+     * Returns the path to the file.
+     * @return the path to the file
+     */
     public @NotNull Path getPath() {
         return path;
     }
 
+    /**
+     * Returns the type of the modification to the file.
+     * @return the type of the modification to the file
+     */
     public @NotNull StatusEntryType getType() {
         return type;
     }
