@@ -423,9 +423,11 @@ public class NucleusManagerTest {
         Files.write(file, content);
         NucleusManager.addToIndex(file);
         NucleusManager.commitChanges(temporaryRootPath, "test commit message");
-        Path file2 = temporaryFolder.newFile().toPath();
+        Path folder = temporaryFolder.newFolder().toPath();
+        Path file2 = Files.createFile(folder.resolve("file2"));
         NucleusManager.cleanRepository(temporaryRootPath);
         assertThat(file2.toFile(), is(not(anExistingFile())));
+        assertThat(folder.toFile(), is(not(anExistingDirectory())));
         assertThat(repository.getRepositoryDirectory().toFile(), is(anExistingDirectory()));
     }
 

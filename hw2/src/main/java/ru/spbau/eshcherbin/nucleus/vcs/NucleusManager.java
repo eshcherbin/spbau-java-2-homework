@@ -629,6 +629,16 @@ public class NucleusManager {
                 Files.deleteIfExists(repository.getRootDirectory().resolve(file));
             }
         }
+        Set<Path> allDirectories = Files.walk(repository.getRootDirectory())
+                .filter(file -> !file.startsWith(repository.getRepositoryDirectory())
+                        && Files.isDirectory(file))
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toSet());
+        for (Path directory : allDirectories) {
+            if (Files.list(directory).count() == 0) {
+                Files.delete(directory);
+            }
+        }
     }
 
     /**
