@@ -1,6 +1,6 @@
 package ru.spbau.eshcherbin.hw6.myjunit;
 
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -17,5 +17,16 @@ public @interface MyTest {
     /**
      * Tells the test runner to ignore this test method with the specified reason.
      */
-    @Nullable String ignore() default "";
+    @NotNull String ignore() default "";
+
+    /**
+     * Tells the test runner to expect the specified exception thrown while running this test.
+     */
+    @NotNull Class<? extends Exception> expected() default NothingExpected.class;
+
+    /**
+     * Special class that is used to specify that no exception is expected.
+     */
+    class NothingExpected extends Exception {
+    }
 }
