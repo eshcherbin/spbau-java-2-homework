@@ -20,7 +20,7 @@ public class MyTestIgnoredReport extends MyTestReport {
                                   long executionTime) {
         super(className,
                 testName,
-                "The test was ignored :" + ignoreReason,
+                "The test was ignored: " + ignoreReason,
                 executionTime,
                 true);
     }

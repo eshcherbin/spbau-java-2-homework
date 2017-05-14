@@ -31,7 +31,7 @@ public class MyTestRunner {
         for (Method method : clazz.getMethods()) {
             if (!Modifier.isStatic(method.getModifiers()) &&
                     Modifier.isPublic(method.getModifiers()) &&
-                    method.getReturnType().equals(Void.class) &&
+                    method.getReturnType().equals(Void.TYPE) &&
                     method.getParameterCount() == 0 &&
                     method.getAnnotation(MyTest.class) != null) {
                 testMethods.add(method);

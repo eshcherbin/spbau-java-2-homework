@@ -22,7 +22,10 @@ public class MyTestUnexpectedExceptionReport extends MyTestReport {
                                               long executionTime) {
         super(className,
                 testName,
-                "An unexpected exception was caught: " + exception.getClass().getName(),
+                "An unexpected exception was caught: " + exception.getClass().getName() +
+                        (exception.getMessage() == null ||  exception.getMessage().isEmpty()
+                                ? ""
+                                : " (" + exception.getMessage() + ")"),
                 executionTime,
                 false);
         this.exception = exception;

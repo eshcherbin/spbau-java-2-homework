@@ -30,7 +30,7 @@ public class Main {
         try {
             testClass = Class.forName(testClassName);
         } catch (ClassNotFoundException e) {
-            System.err.println("Class not found : " + testClassName);
+            System.err.println("Class not found: " + testClassName);
             System.exit(1);
             return;
         }
@@ -39,6 +39,7 @@ public class Main {
             final List<MyTestReport> reports = new MyTestRunner(testClass).runTests();
             long totalExecutionTime = 0;
             int testNumber = 0;
+            int successfulCount = 0;
             for (MyTestReport report : reports) {
                 ++testNumber;
                 System.out.println();
@@ -47,11 +48,15 @@ public class Main {
                 System.out.println("Time: " + report.getExecutionTime() + " ms");
                 System.out.println(report.getReportMessage());
                 if (report instanceof MyTestUnexpectedExceptionReport) {
-                    ((MyTestUnexpectedExceptionReport) report).getException().printStackTrace();
+                    ((MyTestUnexpectedExceptionReport) report).getException().printStackTrace(System.out);
                 }
                 totalExecutionTime += report.getExecutionTime();
+                if (report.isSuccessful()) {
+                    ++successfulCount;
+                }
             }
             System.out.println();
+            System.out.println(successfulCount + " out of " + reports.size() + " tests successful");
             System.out.println("Total execution time for tests from " + testClassName + ": " +
                     totalExecutionTime + " ms");
         } catch (InvalidTestException e) {
