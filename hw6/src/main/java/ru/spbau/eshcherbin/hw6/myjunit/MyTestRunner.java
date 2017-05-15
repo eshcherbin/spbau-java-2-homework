@@ -69,7 +69,7 @@ public class MyTestRunner {
                     "message: {}", clazz.getName(), e.getMessage());
             throw new InvalidTestException(e);
         }
-        long executionTimeStart= System.nanoTime();
+        long executionTimeStart = System.nanoTime();
         try {
             method.invoke(instance);
         } catch (IllegalAccessException e) {

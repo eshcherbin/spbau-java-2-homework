@@ -1,6 +1,7 @@
 package ru.spbau.eshcherbin.hw6.myjunit;
 
 import org.junit.Test;
+import ru.spbau.eshcherbin.hw6.myjunit.mytestingclasses.MyInvalidTestingClassWithConstructorWithArguments;
 import ru.spbau.eshcherbin.hw6.myjunit.mytestingclasses.MySimpleTestingClass;
 
 import java.util.Comparator;
@@ -48,5 +49,11 @@ public class MyTestRunnerTest {
         assertThat(report4.isSuccessful(), is(false));
         assertThat(((MyTestUnexpectedExceptionReport) report4).getException().getClass(),
                 is(NullPointerException.class));
+    }
+
+    @Test(expected = InvalidTestException.class)
+    public void constructorWithArguments() throws Exception {
+        final MyTestRunner testRunner = new MyTestRunner(MyInvalidTestingClassWithConstructorWithArguments.class);
+        testRunner.runTests();
     }
 }

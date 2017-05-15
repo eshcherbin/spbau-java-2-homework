@@ -27,4 +27,13 @@ public class MySimpleTestingClass {
     public void noExceptionTest() {
 
     }
+
+    public void notATest() {
+
+    }
+
+    @MyTest(ignore = "well", expected = Exception.class)
+    public static void staticNotATest() {
+
+    }
 }
