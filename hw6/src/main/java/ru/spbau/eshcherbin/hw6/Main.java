@@ -3,10 +3,7 @@ package ru.spbau.eshcherbin.hw6;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.spbau.eshcherbin.hw6.myjunit.InvalidTestException;
-import ru.spbau.eshcherbin.hw6.myjunit.MyTestReport;
-import ru.spbau.eshcherbin.hw6.myjunit.MyTestRunner;
-import ru.spbau.eshcherbin.hw6.myjunit.MyTestUnexpectedExceptionReport;
+import ru.spbau.eshcherbin.hw6.myjunit.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -80,6 +77,10 @@ public class Main {
                         totalExecutionTime + " ms");
             } catch (InvalidTestException e) {
                 logger.error("InvalidTestException: {}", e.getMessage());
+            } catch (BeforeClassFailedException e) {
+                logger.error("BeforeClassFailedException: {}", e.getMessage());
+            } catch (AfterClassFailedException e) {
+                logger.error("AfterClassFailedException: {}", e.getMessage());
             }
         }
     }

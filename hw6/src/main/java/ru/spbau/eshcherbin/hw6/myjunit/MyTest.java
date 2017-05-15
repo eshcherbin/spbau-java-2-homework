@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 
 /**
  * Annotation to a test method.
- * Annotated method should be <tt>public</tt> and <tt>static</tt> and have no arguments.
+ * Annotated method should be <tt>public</tt> and have no arguments.
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

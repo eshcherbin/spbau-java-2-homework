@@ -1,6 +1,9 @@
 package ru.spbau.eshcherbin.hw6.myjunit;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.Test;
+import ru.spbau.eshcherbin.hw6.myjunit.mytestingclasses.MyBeforeAfterClassTestingClass;
+import ru.spbau.eshcherbin.hw6.myjunit.mytestingclasses.MyBeforeAfterTestingClass;
 import ru.spbau.eshcherbin.hw6.myjunit.mytestingclasses.MyInvalidTestingClassWithConstructorWithArguments;
 import ru.spbau.eshcherbin.hw6.myjunit.mytestingclasses.MySimpleTestingClass;
 
@@ -52,8 +55,24 @@ public class MyTestRunnerTest {
     }
 
     @Test(expected = InvalidTestException.class)
-    public void constructorWithArguments() throws Exception {
+    public void constructorWithArgumentsTest() throws Exception {
         final MyTestRunner testRunner = new MyTestRunner(MyInvalidTestingClassWithConstructorWithArguments.class);
         testRunner.runTests();
+    }
+
+    @Test
+    public void beforeAfterTest() throws Exception {
+        final MyTestRunner testRunner = new MyTestRunner(MyBeforeAfterTestingClass.class);
+        testRunner.runTests();
+        assertThat(MyBeforeAfterTestingClass.TestingHelper.LIST,
+                is(ImmutableList.of("before", "test", "after")));
+    }
+
+    @Test
+    public void beforeAfterClassTest() throws Exception {
+        final MyTestRunner testRunner = new MyTestRunner(MyBeforeAfterClassTestingClass.class);
+        testRunner.runTests();
+        assertThat(MyBeforeAfterClassTestingClass.TestingHelper.LIST,
+                is(ImmutableList.of("beforeClass", "test1", "test2", "afterClass")));
     }
 }
