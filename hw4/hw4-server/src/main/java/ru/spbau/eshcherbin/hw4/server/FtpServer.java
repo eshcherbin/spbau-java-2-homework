@@ -235,7 +235,6 @@ public class FtpServer implements Server {
             }
         }
 
-
         /**
          * Does the necessary work with a channel ready for accepting.
          * @param selectionKey the channel's selection key

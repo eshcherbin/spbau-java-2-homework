@@ -2,4 +2,5 @@ rootProject.name = 'hw4'
 include 'hw4-core'
 include 'hw4-server'
 include 'hw4-client'
+include 'hw4-test'
 
