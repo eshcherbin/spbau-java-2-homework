@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Configuration>
+    <Appenders>
+        <File name="fileAppender" fileName="${sys:user.home}/.ftp-client.log" append="true">
+            <PatternLayout>
+                <pattern>[%d %marker%p %c{1}] %m%n</pattern>
+            </PatternLayout>
+        </File>
+        <Console name="consoleAppender">
+            <PatternLayout>
+                <pattern>[%d %marker%p %c{1}] %m%n</pattern>
+            </PatternLayout>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="info">
+            <appender-ref ref="fileAppender"/>
+            <appender-ref ref="consoleAppender"/>
+        </Root>
+    </Loggers>
+</Configuration>
