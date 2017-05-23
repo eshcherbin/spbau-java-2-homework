@@ -45,4 +45,14 @@ class GuiConfig {
      * Name which is used to identify the parent folder.
      */
     public static final @NotNull String PARENT_FOLDER_NAME = "..";
+
+    /**
+     * Minimum height of the application stage.
+     */
+    public static final double STAGE_MIN_HEIGHT = 400;
+
+    /**
+     * Minimum width of the application stage.
+     */
+    public static final double STAGE_MIN_WIDTH = 400;
 }

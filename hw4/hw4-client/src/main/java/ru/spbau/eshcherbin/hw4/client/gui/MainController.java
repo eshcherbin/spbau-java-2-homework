@@ -10,6 +10,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
@@ -106,37 +107,39 @@ public class MainController implements Initializable {
         downloadIconImage = new Image(downloadIconResource.toExternalForm());
 
         listViewDirectoryContent.setCellFactory(listView -> new DirectoryContentItemListCell());
-        listViewDirectoryContent.setOnMouseClicked(event -> {
-            if (event.getClickCount() < 2) {
-                return;
-            }
-            FtpListResponseItem selectedItem = listViewDirectoryContent.getSelectionModel().getSelectedItem();
-            if (selectedItem.isDirectory()) {
-                if (!currentPath.toString().equals(GuiConfig.ROOT_FOLDER_NAME) &&
-                        listViewDirectoryContent.getSelectionModel().getSelectedIndex() == 0) {
-                    currentPath = currentPath.getParent();
-                } else {
-                    currentPath = currentPath.resolve(selectedItem.getFileName());
-                }
-                updateDirectoryContent();
-            } else {
-                DirectoryChooser directoryChooser = new DirectoryChooser();
-                directoryChooser.setInitialDirectory(Paths.get("").toAbsolutePath().toFile());
-                directoryChooser.setTitle("Choose directory to save " + selectedItem.getFileName());
-                File destinationDirectory = directoryChooser.showDialog(stage);
-                if (destinationDirectory != null) {
-                    try {
-                        client.executeGet(currentPath.resolve(selectedItem.getFileName()).toString(),
-                                destinationDirectory.toPath().resolve(selectedItem.getFileName()));
-                    } catch (ClientNotConnectedException | IOException e) {
-                        logger.error("Disconnected from server");
-                        labelStatus.setText("Disconnected from server");
-                        directoryContentItems.clear();
-                    }
-                }
-            }
-        });
+        listViewDirectoryContent.setOnMouseClicked(this::onListItemClicked);
         listViewDirectoryContent.setItems(directoryContentItems);
+    }
+
+    private void onListItemClicked(MouseEvent event) {
+        if (event.getClickCount() < 2) {
+            return;
+        }
+        FtpListResponseItem selectedItem = listViewDirectoryContent.getSelectionModel().getSelectedItem();
+        if (selectedItem.isDirectory()) {
+            if (!currentPath.toString().equals(GuiConfig.ROOT_FOLDER_NAME) &&
+                    listViewDirectoryContent.getSelectionModel().getSelectedIndex() == 0) {
+                currentPath = currentPath.getParent();
+            } else {
+                currentPath = currentPath.resolve(selectedItem.getFileName());
+            }
+            updateDirectoryContent();
+        } else {
+            DirectoryChooser directoryChooser = new DirectoryChooser();
+            directoryChooser.setInitialDirectory(Paths.get("").toAbsolutePath().toFile());
+            directoryChooser.setTitle("Choose directory to save " + selectedItem.getFileName());
+            File destinationDirectory = directoryChooser.showDialog(stage);
+            if (destinationDirectory != null) {
+                try {
+                    client.executeGet(currentPath.resolve(selectedItem.getFileName()).toString(),
+                            destinationDirectory.toPath().resolve(selectedItem.getFileName()));
+                } catch (ClientNotConnectedException | IOException e) {
+                    logger.error("Disconnected from server");
+                    labelStatus.setText("Disconnected from server");
+                    directoryContentItems.clear();
+                }
+            }
+        }
     }
 
     /**

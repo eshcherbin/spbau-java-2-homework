@@ -43,38 +43,40 @@ public class ConnectionController implements Initializable {
     public void initialize(URL url, ResourceBundle resourceBundle) {
         textFieldAddress.setText(GuiConfig.DEFAULT_ADDRESS);
         textFieldPort.setText(String.valueOf(Config.serverBindingAddress.getPort()));
-        buttonConnect.setOnMouseClicked(event -> {
-            Integer port = Ints.tryParse(textFieldPort.getText());
-            if (!isValidPort(port)) {
-                labelPrompt.setText("Invalid port");
-                return;
-            }
-            InetSocketAddress serverAddress = new InetSocketAddress(textFieldAddress.getText(), port);
+        buttonConnect.setOnMouseClicked(event -> buttonConnectClicked());
+    }
 
-            Scene scene = buttonConnect.getScene();
-            Parent newRoot;
-            FXMLLoader fxmlLoader;
-            try {
-                URL mainSceneResource = getClass().getClassLoader().getResource(GuiConfig.MAIN_FXML_PATH);
-                if (mainSceneResource == null) {
-                    logger.error(fatalMarker, "{} resource not found, aborting", GuiConfig.MAIN_FXML_PATH);
-                    Platform.exit();
-                    System.exit(1);
-                }
-                fxmlLoader = new FXMLLoader(mainSceneResource);
-                newRoot = fxmlLoader.load();
-            } catch (IOException e) {
-                e.printStackTrace();
-                logger.error(fatalMarker, "Couldn't load {} resource, aborting", GuiConfig.MAIN_FXML_PATH);
+    private void buttonConnectClicked() {
+        Integer port = Ints.tryParse(textFieldPort.getText());
+        if (!isValidPort(port)) {
+            labelPrompt.setText("Invalid port");
+            return;
+        }
+        InetSocketAddress serverAddress = new InetSocketAddress(textFieldAddress.getText(), port);
+
+        Scene scene = buttonConnect.getScene();
+        Parent newRoot;
+        FXMLLoader fxmlLoader;
+        try {
+            URL mainSceneResource = getClass().getClassLoader().getResource(GuiConfig.MAIN_FXML_PATH);
+            if (mainSceneResource == null) {
+                logger.error(fatalMarker, "{} resource not found, aborting", GuiConfig.MAIN_FXML_PATH);
                 Platform.exit();
                 System.exit(1);
-                return; // necessary to ensure that newRoot is initialized in the following code
             }
-            scene.setRoot(newRoot);
-            MainController mainController = fxmlLoader.getController();
-            mainController.setStage((Stage) scene.getWindow());
-            mainController.connect(serverAddress);
-        });
+            fxmlLoader = new FXMLLoader(mainSceneResource);
+            newRoot = fxmlLoader.load();
+        } catch (IOException e) {
+            e.printStackTrace();
+            logger.error(fatalMarker, "Couldn't load {} resource, aborting", GuiConfig.MAIN_FXML_PATH);
+            Platform.exit();
+            System.exit(1);
+            return; // necessary to ensure that newRoot is initialized in the following code
+        }
+        scene.setRoot(newRoot);
+        MainController mainController = fxmlLoader.getController();
+        mainController.setStage((Stage) scene.getWindow());
+        mainController.connect(serverAddress);
     }
 
     @Contract(value = "null -> false", pure = true)

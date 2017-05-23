@@ -32,6 +32,8 @@ public class ClientApplication extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setTitle(GuiConfig.STAGE_TITLE);
+        primaryStage.setMinHeight(GuiConfig.STAGE_MIN_HEIGHT);
+        primaryStage.setMinWidth(GuiConfig.STAGE_MIN_WIDTH);
         URL connectionSceneResource = getClass().getClassLoader().getResource(GuiConfig.CONNECTION_FXML_PATH);
         if (connectionSceneResource == null) {
             logger.error(fatalMarker, "{} resource not found, aborting", GuiConfig.CONNECTION_FXML_PATH);
