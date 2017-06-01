@@ -10,4 +10,5 @@ os:
 env:
   - PROJECT_DIR=hw1
   - PROJECT_DIR=hw4
+  - PROJECT_DIR=hw6
 script: cd $PROJECT_DIR && ./gradlew check
